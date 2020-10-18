@@ -284,7 +284,7 @@ def is_root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> boo
     :param transport_id:    device transport id
     :return:                True if adb is running as root
     """
-    result, code = shell("busybox whoami", ip=ip, transport_id=transport_id)
+    result, code = shell("whoami", ip=ip, transport_id=transport_id)
     return result == "root"
 
 

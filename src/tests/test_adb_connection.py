@@ -10,11 +10,13 @@ from adb import adb_connection
 from . import get_logger
 
 logging.basicConfig(level=verboselogs.SPAM)
-
 log = get_logger("==> test_adb_connection", verboselogs.SPAM)
 
 DEVICE_IP = "192.168.1.114:5555"
 
+# coverage run -m unittest discover
+# coverage report -m
+# coverage html
 
 def handle_event(event):
     log.verbose(f"Received Event: {event}")
@@ -142,6 +144,13 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect_all())
         self.assertFalse(adb_connection.is_connected(ip=DEVICE_IP))
+
+    def test_009(self):
+        print()
+        log.debug("test_009")
+        self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
+        self.assertEqual("/system/bin/cat", adb_connection.which("cat", ip=DEVICE_IP))
+        self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
 
 if __name__ == '__main__':
