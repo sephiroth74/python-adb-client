@@ -2,22 +2,22 @@ import logging
 import os
 import time
 import unittest
-
-import coloredlogs
 import verboselogs
+
 import zope.event
 from adb import adb_connection
 
-logging.basicConfig(level=logging.SPAM)
-log = verboselogs.VerboseLogger("=====> test_adb_connection")
+from . import get_logger
 
-coloredlogs.install(logging.root.level, fmt='%(asctime)s %(levelname)-10s %(name)-12s %(lineno)-4d %(processName)-12s   %(message)s')
+logging.basicConfig(level=verboselogs.SPAM)
+
+log = get_logger("==> test_adb_connection", verboselogs.SPAM)
 
 DEVICE_IP = "192.168.1.114:5555"
 
 
 def handle_event(event):
-    log.spam(f"Received Event: {event}")
+    log.verbose(f"Received Event: {event}")
 
 
 zope.event.subscribers.append(handle_event)
@@ -25,15 +25,16 @@ zope.event.subscribers.append(handle_event)
 
 class ADBConnectionTestCase(unittest.TestCase):
     def test_001(self):
-        """test adb_path exists"""
-        log.debug("test_001")
+        print()
+        log.warning("test_001")
         adb_path = adb_connection.get_adb_path()
         self.assertIsNotNone(adb_path)
         self.assertTrue(len(adb_path) > 0)
         self.assertTrue(os.path.exists(adb_path))
 
     def test_002(self):
-        log.debug("test_002")
+        print()
+        log.warning("test_002")
         devices = adb_connection.devices()
         self.assertIsNotNone(devices)
 
@@ -53,6 +54,7 @@ class ADBConnectionTestCase(unittest.TestCase):
                 self.assertTrue(adb_connection.is_connected(transport_id=device.transport_id))
 
     def test_003(self):
+        print()
         log.debug("test_003")
         if adb_connection.is_connected(ip=DEVICE_IP):
             self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
@@ -76,6 +78,7 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(adb_connection.wait_for_device(ip=DEVICE_IP))
 
     def test_005(self):
+        print()
         log.debug("test_005")
         # connect
         self.assertTrue(adb_connection.connect(DEVICE_IP))
@@ -110,6 +113,7 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertFalse(adb_connection.is_root(ip=DEVICE_IP))
 
     def test_006(self):
+        print()
         log.debug("test_006")
         self.assertTrue(adb_connection.connect(DEVICE_IP))
 
@@ -127,33 +131,17 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
     def test_007(self):
+        print()
         log.debug("test_007")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         self.assertTrue(adb_connection.wait_for_device(ip=DEVICE_IP))
 
     def test_008(self):
+        print()
         log.debug("test_008")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect_all())
         self.assertFalse(adb_connection.is_connected(ip=DEVICE_IP))
-
-    #
-    # def test_002(self):
-    #     log.debug("test_002")
-    #     self.assertTrue(adb_connection.disconnect_all())
-    #     self.assertFalse(adb_connection.is_connected(DEVICE_IP))
-    #
-    # def test_003(self):
-    #     log.debug("test_003")
-    #     self.assertTrue(adb_connection.connect(DEVICE_IP))
-    #     self.assertTrue(len(adb_connection.devices()) > 0)
-    #     self.assertTrue(adb_connection.disconnect_all())
-    #
-    # def test_004(self):
-    #     log.debug("test_004")
-    #     self.assertTrue(adb_connection.connect(DEVICE_IP))
-    #     self.assertTrue(adb_connection.wait_for_device(DEVICE_IP))
-    #     self.assertTrue(adb_connection.disconnect(DEVICE_IP))
 
 
 if __name__ == '__main__':

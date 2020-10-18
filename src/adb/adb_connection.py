@@ -168,9 +168,9 @@ def execute(command: str,
         result = out.communicate()
         if not command == "get-state":
             log().spam(
-                "Result: `%s` (code:%s)",
-                result[0].decode("utf-8").strip() if result[0] else "None",
-                out.returncode,
+                "Result: `%s` (code:%s)" % (
+                    result[0].decode("utf-8").strip() if result[0] else "None",
+                    out.returncode)
             )
         return out.returncode == 0
     except subprocess.CalledProcessError:
@@ -320,7 +320,7 @@ def connect(ip: str) -> bool:
     :param ip: device ip
     :return: true if connection succeed
     """
-    log().verbose(f"Connecting to {ip}..")
+    log().debug(f"Connecting to {ip}..")
 
     if is_connected(ip=ip):
         log().notice("Already connected...")
