@@ -18,5 +18,7 @@ def get_logger(name: str, level: int) -> verboselogs.VerboseLogger:
     # handler = logging.StreamHandler()
     # handler.setFormatter(formatter)
     # logger.addFilter(_fmt_filter)
-    coloredlogs.install(level=level, fmt='%(asctime)s:%(msecs)03d %(levelname)-10s %(name)-12s %(lineno)-4d %(processName)-12s   %(message)s')
+    coloredlogs.install(level=level,
+                        fmt='%(asctime)s:%(msecs)03d %(levelname)-10s %(name)-12s %(lineno)-4d %(processName)-12s   %(message)s',
+                        datefmt='%H:%M:%S')
     return logger

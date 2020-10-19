@@ -2,18 +2,20 @@ import logging
 import os
 import time
 import unittest
-import verboselogs
 
+import verboselogs
 import zope.event
 from adb import adb_connection
 
 from . import get_logger
 
 logging.basicConfig(level=verboselogs.SPAM)
+
 log = get_logger("==> test_adb_connection", verboselogs.SPAM)
 
 DEVICE_IP = "192.168.1.114:5555"
-SKIP_TESTS = True
+
+SKIP_TESTS = False
 SKIP_REASON = "skip"
 
 
@@ -37,7 +39,6 @@ class ADBConnectionTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
-
 
     def tearDown(self) -> None:
         adb_connection.disconnect(ip=DEVICE_IP)

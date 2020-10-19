@@ -106,6 +106,9 @@ class ADBCommandResult(object):
     def __iter__(self):
         return (self._result, self._code).__iter__()
 
+    def __str__(self):
+        return f"Result(code={self._code}, result={self._result})"
+
     @property
     def code(self):
         """
@@ -162,9 +165,9 @@ def which(command: str,
     :param transport_id:   device transport id
     :return: the command path on the device, if found
     """
-    result, code = shell(f"which {command}", ip=ip, transport_id=transport_id)
-    if code == 0:
-        return result
+    result = shell(f"which {command}", ip=ip, transport_id=transport_id)
+    if result.code == ADBCommandResult.RESULT_OK:
+        return result.result
     return None
 
 
@@ -198,7 +201,7 @@ def execute(command: str,
                     result[0].decode("utf-8").strip() if result[0] else "None",
                     out.returncode)
             )
-        return out.returncode == 0
+        return out.returncode == ADBCommandResult.RESULT_OK
     except subprocess.CalledProcessError:
         return False
 
@@ -281,10 +284,12 @@ def wait_for_device(ip: Optional[str] = None, transport_id: Optional[str] = None
     """
     if is_connected(ip=ip, transport_id=transport_id):
         return True
-    # adb -s 192.168.1.114  wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
 
-    return execute("wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 9999'",
-                   ip=ip, transport_id=transport_id)
+    execute(
+        "wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 143'",
+        ip=ip, transport_id=transport_id)
+
+    return is_connected(ip=ip, transport_id=transport_id)
 
 
 def root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
@@ -333,9 +338,9 @@ def devices() -> List[Device]:
     Return a list of attached devices
     :return:
     """
-    result, code = capture_output("devices -l")
-    if code == 0 and result:
-        attached_devices = list(map(lambda x: x.split("\t")[0], result.split("\n")[1:]))
+    result = capture_output("devices -l")
+    if result.code == ADBCommandResult.RESULT_OK and result.result:
+        attached_devices = list(map(lambda x: x.split("\t")[0], result.result.split("\n")[1:]))
         result = list(filter(lambda y: y is not None, map(lambda x: Device.parse(x), attached_devices)))
         return result
     else:
@@ -349,9 +354,9 @@ def is_connected(ip: Optional[str] = None, transport_id: Optional[str] = None) -
     :param transport_id:  device transport_id
     :return: true if connected
     """
-    result, code = capture_output("get-state", ip=ip, transport_id=transport_id)
-    log().spam(f"Result: `{result}` (code:{code})")
-    return code == 0 and result == "device"
+    result = capture_output("get-state", ip=ip, transport_id=transport_id)
+    log().spam(result)
+    return result.code == ADBCommandResult.RESULT_OK and result.result == "device"
 
 
 def connect(ip: str) -> bool:
