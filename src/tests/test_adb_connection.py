@@ -1,20 +1,15 @@
-import logging
 import os
 import time
 import unittest
 from pathlib import Path
 
-import verboselogs
 import zope.event
 
 from adb import adb_connection
 from . import get_logger
+from .test_const import DEVICE_IP
 
-logging.basicConfig(level=verboselogs.SPAM)
-
-log = get_logger("==> test_adb_connection", verboselogs.SPAM)
-
-DEVICE_IP = "192.168.1.114:5555"
+log = get_logger("==> test_adb_connection")
 
 SKIP_TESTS = True
 SKIP_REASON = "skip"

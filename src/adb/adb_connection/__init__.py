@@ -165,7 +165,6 @@ environment variables:
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
@@ -174,7 +173,7 @@ from typing import List, Optional, Dict, Tuple
 
 import zope.event
 
-from . import events
+from adb import events
 
 __all__ = ['Device', 'ADBCommandResult', 'get_adb_path', 'set_adb_path', 'which', 'execute', 'capture_output', 'shell',
            'wait_for_device', 'root', 'unroot', 'is_root', 'devices', 'is_connected', 'connect', 'disconnect_all', 'disconnect',
@@ -261,14 +260,19 @@ class ADBCommandResult(object):
     RESULT_OK = 0
     RESULT_ERROR = 1
 
-    def __init__(self, result: Tuple[Optional[bytes], Optional[bytes]] = (None, None), code: int = RESULT_OK):
+    def __init__(self,
+                 result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
+                 code: int = RESULT_OK):
         super(ADBCommandResult, self).__init__()
-        self._stdout = result[0].decode("utf-8").strip() if result[0] else None
+        self._stdout = result[0] if result[0] else None
         self._stderr = result[1].decode('utf-8').strip() if result[1] else None
         self._code = code
 
+    def __iter__(self):
+        return (self._code, self.output(), self.error()).__iter__()
+
     def __str__(self):
-        return f"Result(code={self._code}, stdout={self._stdout}, stderr={self._stderr})"
+        return f"Result(code={self._code}, output={self._stdout}, error={self._stderr})"
 
     @property
     def code(self):
@@ -278,15 +282,20 @@ class ADBCommandResult(object):
         """
         return self._code
 
-    @property
-    def stdout(self): return self._stdout
+    def output(self, raw: bool = False):
+        if self._stdout and not raw:
+            return self._stdout.decode("utf-8").strip()
+        return self._stdout
 
-    @property
-    def stderr(self): return self._stderr
+    def error(self): return self._stderr
+
+    @staticmethod
+    def from_error(code: int = RESULT_ERROR):
+        return ADBCommandResult(result=(None, None), code=code)
 
 
 def log():
-    from . import _logger
+    from .. import _logger
     logger = _logger.get_logger(__name__)
     return logger
 
@@ -323,7 +332,7 @@ def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     """
     result = shell(f"which {command}", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK:
-        return result.stdout
+        return result.output()
     return None
 
 
@@ -384,21 +393,23 @@ def capture_output(command: str, ip: Optional[str] = None, **kwargs) -> ADBComma
         return ADBCommandResult(code=ADBCommandResult.RESULT_ERROR)
 
 
-def shell(command: str, ip: Optional[str] = None) -> ADBCommandResult:
+def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     """
     Execute a command in the adb shell
     :param command:         shell command to execute
     :param ip:              device ip
-    :return: result, code
+    :param kwargs:          if contains the 'args' key, its value is passed as arguments to the input command
+    :return:
     """
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    base_command = f"{adb} {ip_arg} shell {command}".split()
-    command_log = f"{os.path.basename(adb)} {ip_arg} shell {command}".split()
-    log().spam(f"Executing `{' '.join(command_log)}`")
+    command_line = f"{ip_arg} shell {command} {get_extra_arguments(**kwargs)}"
+    command_full = f"{adb} {command_line}"
+    command_log = f"adb {command_line}"
+    log().spam(f"Executing `{command_log}`")
 
     out = subprocess.Popen(
-        base_command,
+        command_full.split(),
         stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
@@ -472,7 +483,7 @@ def is_root(ip: Optional[str] = None) -> bool:
     """
     result = shell("whoami", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK:
-        return result.stdout == "root"
+        return result.output() == "root"
     return False
 
 
@@ -484,7 +495,7 @@ def devices(**kwargs) -> List[str]:
     """
     result = capture_output(command="devices", **kwargs)
     if result.code == ADBCommandResult.RESULT_OK:
-        return list(map(lambda x: x.split("\t")[0], result.stdout.split("\n")[1:]))
+        return list(map(lambda x: x.split("\t")[0], result.output().split("\n")[1:]))
     else:
         return []
     # if result.code == ADBCommandResult.RESULT_OK and result.result:
@@ -503,7 +514,7 @@ def is_connected(ip: Optional[str] = None) -> bool:
     """
     result = capture_output(command="get-state", ip=ip)
     log().spam(result)
-    return result.code == ADBCommandResult.RESULT_OK and result.stdout == "device"
+    return result.code == ADBCommandResult.RESULT_OK and result.output() == "device"
 
 
 def connect(ip: str) -> bool:
@@ -610,7 +621,7 @@ def version() -> Optional[str]:
     """
     result = capture_output(command="version")
     if result.code == ADBCommandResult.RESULT_OK:
-        return result.stdout
+        return result.output()
     return None
 
 
@@ -644,5 +655,5 @@ def get_extra_arguments(**kwargs) -> str:
     if 'args' in kwargs:
         if not type(kwargs['args']) == tuple:
             raise RuntimeError('`args` must be a tuple')
-        return ' '.join(kwargs['args'])
+        return ' '.join(filter(lambda x: x is not None, kwargs['args']))
     return ''
