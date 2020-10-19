@@ -14,9 +14,9 @@ import zope.event
 
 from . import events
 
-__all__ = ['Device', 'get_adb_path', 'set_adb_path', 'which', 'execute', 'capture_output', 'shell', 'wait_for_device', 'root',
-           'unroot', 'is_root', 'devices', 'is_connected', 'connect', 'disconnect_all', 'disconnect', 'reboot', 'remount_as',
-           'remount']
+__all__ = ['Device', 'ADBCommandResult', 'get_adb_path', 'set_adb_path', 'which', 'execute', 'capture_output', 'shell',
+           'wait_for_device', 'root', 'unroot', 'is_root', 'devices', 'is_connected', 'connect', 'disconnect_all', 'disconnect',
+           'reboot', 'remount_as', 'remount', 'busybox', 'bugreport', 'mdns_check', 'version', 'mdns_services']
 
 adb_path = None
 
@@ -155,17 +155,14 @@ def set_adb_path(path: str):
     adb_path = path
 
 
-def which(command: str,
-          ip: Optional[str] = None,
-          transport_id: Optional[str] = None) -> Optional[str]:
+def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     """
     Execute 'which' command on the specified device and return the result
     :param command:     command to test with 'which'
     :param ip:   device ip
-    :param transport_id:   device transport id
     :return: the command path on the device, if found
     """
-    result = shell(f"which {command}", ip=ip, transport_id=transport_id)
+    result = shell(f"which {command}", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK:
         return result.result
     return None
@@ -173,22 +170,20 @@ def which(command: str,
 
 def execute(command: str,
             ip: Optional[str] = None,
-            transport_id: Optional[str] = None,
             *args,
             **kwargs) -> bool:
     """
     Execute an adb command on the given device, if connected
     :param command:     command to execute
     :param ip:   device ip
-    :param transport_id:   device transport id
     :param args:        optional list of arguments to pass to command
     :param kwargs:
     :return:
     """
-    ip = f"-s {ip} " if ip else f"-t {transport_id} " if transport_id else ""
+    ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    final_command = "{} {}{}".format(adb, ip, (command % args)).split()
-    command_log = "{} {}{}".format(os.path.basename(adb), ip, (command % args)).split()
+    final_command = "{} {}{}".format(adb, ip_arg, (command % args)).split()
+    command_log = "{} {}{}".format(os.path.basename(adb), ip_arg, (command % args)).split()
     output = subprocess.PIPE if "stdout" not in kwargs else kwargs["stdout"]
 
     try:
@@ -206,22 +201,18 @@ def execute(command: str,
         return False
 
 
-def capture_output(command: str,
-                   ip: Optional[str] = None,
-                   transport_id: Optional[str] = None,
-                   **kwargs) -> ADBCommandResult:
+def capture_output(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
     :param command:         command to execute
     :param ip:       device address ip
-    :param transport_id:    device transport id
     :param kwargs:
     :return:
     """
-    ip = f"-s {ip} " if ip else f"-t {transport_id} " if transport_id else ""
+    ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    command1 = "{} {}{}".format(adb, ip, command).split()
-    command_log = "{} {}{}".format(os.path.basename(adb), ip, command).split()
+    command1 = "{} {}{}".format(adb, ip_arg, command).split()
+    command_log = "{} {}{}".format(os.path.basename(adb), ip_arg, command).split()
     try:
         log().spam("Executing `%s`" % " ".join(command_log))
         out = subprocess.Popen(
@@ -237,18 +228,17 @@ def capture_output(command: str,
         return ADBCommandResult(None, 1)
 
 
-def shell(command: str, ip: Optional[str] = None, transport_id: Optional[str] = None) -> ADBCommandResult:
+def shell(command: str, ip: Optional[str] = None) -> ADBCommandResult:
     """
     Execute a command in the adb shell
     :param command:         shell command to execute
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return: result, code
     """
-    ip = f"-s {ip} " if ip else f"-t {transport_id} " if transport_id else ""
+    ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    base_command = f"{adb} {ip} shell {command}".split()
-    command_log = f"{os.path.basename(adb)} {ip} shell {command}".split()
+    base_command = f"{adb} {ip_arg} shell {command}".split()
+    command_log = f"{os.path.basename(adb)} {ip_arg} shell {command}".split()
     log().spam(f"Executing `{' '.join(command_log)}`")
 
     out = subprocess.Popen(
@@ -262,74 +252,69 @@ def shell(command: str, ip: Optional[str] = None, transport_id: Optional[str] = 
     return ADBCommandResult(result[0].decode("UTF-8").strip(), out.returncode)
 
 
-def busybox(command: str, ip: Optional[str] = None, transport_id: Optional[str] = None) -> ADBCommandResult:
+def busybox(command: str, ip: Optional[str] = None) -> ADBCommandResult:
     """
     Executes a shell command using 'busybox'. If busybox in not installed on the device it will fail.\n
     See https://busybox.net/
 
     :param command:         the busybox command to execute
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                command result
     """
-    return shell(f"busybox {command}", ip=ip, transport_id=transport_id)
+    return shell(f"busybox {command}", ip=ip)
 
 
-def wait_for_device(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def wait_for_device(ip: Optional[str] = None) -> bool:
     """
     Execute and return the result of 'adb wait-for-device'
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                true if device connects
     """
-    if is_connected(ip=ip, transport_id=transport_id):
+    if is_connected(ip=ip):
         return True
 
     execute(
         "wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 143'",
-        ip=ip, transport_id=transport_id)
+        ip=ip)
 
-    return is_connected(ip=ip, transport_id=transport_id)
+    return is_connected(ip=ip)
 
 
-def root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def root(ip: Optional[str] = None) -> bool:
     """
     Restart adb connection as root
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                true if root succeded
     """
-    if is_root(ip=ip, transport_id=transport_id):
+    if is_root(ip=ip):
         return True
-    execute("root", ip=ip, transport_id=transport_id)
-    wait_for_device(ip=ip, transport_id=transport_id)
-    return is_root(ip=ip, transport_id=transport_id)
+    execute("root", ip=ip)
+    wait_for_device(ip=ip)
+    return is_root(ip=ip)
 
 
 # noinspection SpellCheckingInspection
-def unroot(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def unroot(ip: Optional[str] = None) -> bool:
     """
     Restart adb as unroot
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                True on success
     """
-    if not is_root(ip=ip, transport_id=transport_id):
+    if not is_root(ip=ip):
         return True
 
-    execute("unroot", ip=ip, transport_id=transport_id)
-    wait_for_device(ip=ip, transport_id=transport_id)
-    return not is_root(ip=ip, transport_id=transport_id)
+    execute("unroot", ip=ip)
+    wait_for_device(ip=ip)
+    return not is_root(ip=ip)
 
 
-def is_root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def is_root(ip: Optional[str] = None) -> bool:
     """
     Test if adb connection is running as root
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                True if adb is running as root
     """
-    result, code = shell("whoami", ip=ip, transport_id=transport_id)
+    result, code = shell("whoami", ip=ip)
     return result == "root"
 
 
@@ -347,14 +332,13 @@ def devices() -> List[Device]:
         return []
 
 
-def is_connected(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def is_connected(ip: Optional[str] = None) -> bool:
     """
     Returns true if the given device is connected
     :param ip:  device ip
-    :param transport_id:  device transport_id
     :return: true if connected
     """
-    result = capture_output("get-state", ip=ip, transport_id=transport_id)
+    result = capture_output("get-state", ip=ip)
     log().spam(result)
     return result.code == ADBCommandResult.RESULT_OK and result.result == "device"
 
@@ -414,47 +398,80 @@ def disconnect(ip: str) -> bool:
     return False
 
 
-def reboot(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def reboot(ip: Optional[str] = None) -> bool:
     """
     Reboot the device
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                True on success
     """
-    if execute("reboot", ip=ip, transport_id=transport_id):
+    if execute("reboot", ip=ip):
         zope.event.notify(events.ADBEvent(events.ADBConnectionEvent.Reboot, ip))
         return True
     return False
 
 
-def remount(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
+def remount(ip: Optional[str] = None) -> bool:
     """
     Remount the file system if root is permitted
     :param ip:              device ip
-    :param transport_id:    device transport id
     :return:                True on success
     """
-    if not is_root(ip=ip, transport_id=transport_id):
-        if not root(ip=ip, transport_id=transport_id):
+    if not is_root(ip=ip):
+        if not root(ip=ip):
             return False
-    return execute("remount", ip=ip, transport_id=transport_id)
+    return execute("remount", ip=ip)
 
 
 def remount_as(ip: Optional[str] = None,
-               transport_id: Optional[str] = None,
                writeable: bool = False, folder: str = "/system") -> bool:
     """
     Mount/Remount file-system
     :param folder:          folder to mount
     :param writeable:       mount as writeable or readable-only
     :param ip:              device ip
-    :param transport_id:    device transport id
     :rtype:                 true on success
     """
-    if not is_root(ip=ip, transport_id=transport_id):
-        if not root(ip=ip, transport_id=transport_id):
+    if not is_root(ip=ip):
+        if not root(ip=ip):
             return False
     if writeable:
-        return shell(f"mount -o rw,remount {folder}", ip=ip, transport_id=transport_id).code == ADBCommandResult.RESULT_OK
+        return shell(f"mount -o rw,remount {folder}", ip=ip).code == ADBCommandResult.RESULT_OK
     else:
-        return shell(f"mount -o ro,remount {folder}", ip=ip, transport_id=transport_id).code == ADBCommandResult.RESULT_OK
+        return shell(f"mount -o ro,remount {folder}", ip=ip).code == ADBCommandResult.RESULT_OK
+
+
+def version() -> Optional[str]:
+    """
+    Fetch and return the current adb version
+    :return: the output as returned by 'adb version'
+    """
+    result = capture_output("version")
+    if result.code == ADBCommandResult.RESULT_OK:
+        return result.result
+    return None
+
+
+def mdns_services() -> ADBCommandResult:
+    """
+    Return the result of the command 'adb mdns services'
+    :return:
+    """
+    return capture_output("mdns services")
+
+
+def mdns_check() -> ADBCommandResult:
+    """
+    Return the result of the command 'adb mdns check'
+    :return:
+    """
+    return capture_output("mdns check")
+
+
+def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
+    """
+    Execute and return the result of the command 'adb bugreport'
+    :param dest:    optional target local folder/filename for the bugreport
+    :param ip:      optional device ip
+    :return:        true on success
+    """
+    return execute(f"bugreport {dest}", ip=ip)
