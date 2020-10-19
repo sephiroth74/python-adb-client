@@ -8,13 +8,15 @@ import re
 import shutil
 import subprocess
 import time
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 
 import zope.event
 
 from . import events
 
-__all__ = ['Device', 'get_adb_path']
+__all__ = ['Device', 'get_adb_path', 'set_adb_path', 'which', 'execute', 'capture_output', 'shell', 'wait_for_device', 'root',
+           'unroot', 'is_root', 'devices', 'is_connected', 'connect', 'disconnect_all', 'disconnect', 'reboot', 'remount_as',
+           'remount']
 
 adb_path = None
 
@@ -25,6 +27,7 @@ class Device(object):
     """
 
     def __init__(self, identifier: str, attrs: Dict[str, str]):
+        super(Device, self).__init__()
         self._identifier = identifier
         self._attrs = attrs
 
@@ -90,6 +93,29 @@ class Device(object):
         else:
             log().warning(f"Failed to parse device string {string}")
             return None
+
+
+class ADBCommandResult(object):
+    RESULT_OK = 0
+
+    def __init__(self, result: Optional[str], code: int):
+        super(ADBCommandResult, self).__init__()
+        self._result = result
+        self._code = code
+
+    def __iter__(self):
+        return (self._result, self._code).__iter__()
+
+    @property
+    def code(self):
+        """
+        Error Code returned. if '0' it means no error
+        :return:
+        """
+        return self._code
+
+    @property
+    def result(self): return self._result
 
 
 def log():
@@ -180,7 +206,7 @@ def execute(command: str,
 def capture_output(command: str,
                    ip: Optional[str] = None,
                    transport_id: Optional[str] = None,
-                   **kwargs) -> Tuple[Optional[str], int]:
+                   **kwargs) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
     :param command:         command to execute
@@ -202,13 +228,13 @@ def capture_output(command: str,
             shell=kwargs.get("shell", False),
         )
         result = out.communicate()
-        return result[0].decode("utf-8").strip(), out.returncode
+        return ADBCommandResult(result[0].decode("utf-8").strip(), out.returncode)
     except subprocess.CalledProcessError as e:
         log().warning(e)
-        return None, 1
+        return ADBCommandResult(None, 1)
 
 
-def shell(command: str, ip: Optional[str] = None, transport_id: Optional[str] = None) -> Tuple[str, int]:
+def shell(command: str, ip: Optional[str] = None, transport_id: Optional[str] = None) -> ADBCommandResult:
     """
     Execute a command in the adb shell
     :param command:         shell command to execute
@@ -230,7 +256,20 @@ def shell(command: str, ip: Optional[str] = None, transport_id: Optional[str] = 
         shell=False,
     )
     result = out.communicate()
-    return result[0].decode("UTF-8").strip(), out.returncode
+    return ADBCommandResult(result[0].decode("UTF-8").strip(), out.returncode)
+
+
+def busybox(command: str, ip: Optional[str] = None, transport_id: Optional[str] = None) -> ADBCommandResult:
+    """
+    Executes a shell command using 'busybox'. If busybox in not installed on the device it will fail.\n
+    See https://busybox.net/
+
+    :param command:         the busybox command to execute
+    :param ip:              device ip
+    :param transport_id:    device transport id
+    :return:                command result
+    """
+    return shell(f"busybox {command}", ip=ip, transport_id=transport_id)
 
 
 def wait_for_device(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
@@ -242,7 +281,10 @@ def wait_for_device(ip: Optional[str] = None, transport_id: Optional[str] = None
     """
     if is_connected(ip=ip, transport_id=transport_id):
         return True
-    return execute("wait-for-device", ip=ip, transport_id=transport_id)
+    # adb -s 192.168.1.114  wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 82'
+
+    return execute("wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 9999'",
+                   ip=ip, transport_id=transport_id)
 
 
 def root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
@@ -252,13 +294,11 @@ def root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
     :param transport_id:    device transport id
     :return:                true if root succeded
     """
-    assert not is_root(ip)
-    result = execute("root", ip=ip, transport_id=transport_id)
-
-    time.sleep(1)
-    if not is_connected(ip=ip, transport_id=transport_id):
-        wait_for_device(ip=ip, transport_id=transport_id)
-    return result
+    if is_root(ip=ip, transport_id=transport_id):
+        return True
+    execute("root", ip=ip, transport_id=transport_id)
+    wait_for_device(ip=ip, transport_id=transport_id)
+    return is_root(ip=ip, transport_id=transport_id)
 
 
 # noinspection SpellCheckingInspection
@@ -269,12 +309,12 @@ def unroot(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool
     :param transport_id:    device transport id
     :return:                True on success
     """
-    assert is_root(ip)
-    result = execute("unroot", ip=ip, transport_id=transport_id)
-    time.sleep(1)
-    if not is_connected(ip=ip, transport_id=transport_id):
-        wait_for_device(ip)
-    return result
+    if not is_root(ip=ip, transport_id=transport_id):
+        return True
+
+    execute("unroot", ip=ip, transport_id=transport_id)
+    wait_for_device(ip=ip, transport_id=transport_id)
+    return not is_root(ip=ip, transport_id=transport_id)
 
 
 def is_root(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
@@ -384,28 +424,32 @@ def reboot(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool
 
 def remount(ip: Optional[str] = None, transport_id: Optional[str] = None) -> bool:
     """
-    Remount the file system
+    Remount the file system if root is permitted
     :param ip:              device ip
     :param transport_id:    device transport id
     :return:                True on success
     """
     if not is_root(ip=ip, transport_id=transport_id):
-        root(ip=ip, transport_id=transport_id)
+        if not root(ip=ip, transport_id=transport_id):
+            return False
     return execute("remount", ip=ip, transport_id=transport_id)
 
 
 def remount_as(ip: Optional[str] = None,
                transport_id: Optional[str] = None,
-               writeable: bool = False, folder: str = "/system") -> Tuple[str, int]:
+               writeable: bool = False, folder: str = "/system") -> bool:
     """
     Mount/Remount file-system
     :param folder:          folder to mount
     :param writeable:       mount as writeable or readable-only
     :param ip:              device ip
     :param transport_id:    device transport id
-    :rtype:                 a tuple containing the result string and the result code (0 = success)
+    :rtype:                 true on success
     """
+    if not is_root(ip=ip, transport_id=transport_id):
+        if not root(ip=ip, transport_id=transport_id):
+            return False
     if writeable:
-        return shell(f"mount -o rw,remount {folder}", ip=ip, transport_id=transport_id)
+        return shell(f"mount -o rw,remount {folder}", ip=ip, transport_id=transport_id).code == ADBCommandResult.RESULT_OK
     else:
-        return shell(f"mount -o ro,remount {folder}", ip=ip, transport_id=transport_id)
+        return shell(f"mount -o ro,remount {folder}", ip=ip, transport_id=transport_id).code == ADBCommandResult.RESULT_OK
