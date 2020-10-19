@@ -6,8 +6,8 @@ from pathlib import Path
 
 import verboselogs
 import zope.event
-from adb import adb_connection
 
+from adb import adb_connection
 from . import get_logger
 
 logging.basicConfig(level=verboselogs.SPAM)
@@ -39,15 +39,16 @@ zope.event.subscribers.append(handle_event)
 class ADBConnectionTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
+        print('setUp')
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
 
     def tearDown(self) -> None:
+        print('tearDown')
         adb_connection.disconnect(ip=DEVICE_IP)
 
     @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_001(self):
-        print()
-        log.debug("test_001")
+        print("test_001")
         adb_path = adb_connection.get_adb_path()
         self.assertIsNotNone(adb_path)
         self.assertTrue(len(adb_path) > 0)
@@ -55,10 +56,10 @@ class ADBConnectionTestCase(unittest.TestCase):
 
     @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_002(self):
-        print()
-        log.debug("test_002")
-        devices = adb_connection.devices()
+        print("test_002")
+        devices = adb_connection.devices(args=("-l",))
         self.assertIsNotNone(devices)
+        self.assertTrue(len(devices) > 0)
 
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         devices = adb_connection.devices()
@@ -67,29 +68,19 @@ class ADBConnectionTestCase(unittest.TestCase):
 
         for device in devices:
             log.debug(f"attached device: {device}")
-            log.debug(f"is_usb:{device.is_usb()}, is_emulator:{device.is_emulator()}, is_wifi:{device.is_wifi()}")
-            transport_id = device.transport_id
-            self.assertTrue(transport_id is not None and len(transport_id) > 0)
-            if device.is_wifi():
-                self.assertTrue(adb_connection.is_connected(ip=device.identifier))
-            else:
-                self.assertTrue(adb_connection.is_connected(transport_id=device.transport_id))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_003(self):
         print()
         log.debug("test_003")
         if adb_connection.is_connected(ip=DEVICE_IP):
             self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
-        devices = list(filter(lambda x: x.identifier == DEVICE_IP, adb_connection.devices()))
+        devices = list(filter(lambda x: DEVICE_IP in x, adb_connection.devices()))
         self.assertTrue(len(devices) == 0)
-
         self.assertTrue(adb_connection.connect(DEVICE_IP))
 
-        devices = list(filter(lambda x: x.identifier == DEVICE_IP, adb_connection.devices()))
+        devices = list(filter(lambda x: DEVICE_IP in x, adb_connection.devices()))
         self.assertTrue(len(devices) > 0)
-
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
     @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
@@ -201,6 +192,7 @@ class ADBConnectionTestCase(unittest.TestCase):
             self.assertEqual(adb_connection.ADBCommandResult.RESULT_OK, result.code)
             self.assertEqual("shell", result.result)
 
+    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_011(self):
         print()
         log.debug("test_011")
@@ -209,6 +201,7 @@ class ADBConnectionTestCase(unittest.TestCase):
         for line in version.splitlines():
             log.debug(line)
 
+    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_012(self):
         print("test_012")
         mdns_check = adb_connection.mdns_check()
@@ -218,12 +211,13 @@ class ADBConnectionTestCase(unittest.TestCase):
             log.debug(f"mdns_services: {mdns_services}")
             self.assertIsNotNone(mdns_services.result)
 
+    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_013(self):
         print("test_013")
         dest_file = Path(os.path.dirname(__file__)) / "bugreport.zip"
         dest_file.unlink(True)
         self.assertFalse(dest_file.exists())
-        self.assertTrue(adb_connection.bugreport(dest_file, ip=DEVICE_IP))
+        self.assertTrue(adb_connection.bugreport(str(dest_file), ip=DEVICE_IP))
         self.assertTrue(dest_file.exists())
         dest_file.unlink(True)
 

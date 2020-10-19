@@ -1,6 +1,168 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Android Debug Bridge version 1.0.41
+Version 30.0.4-6686687
+Installed as /Users/alessandro/Library/Android/sdk/platform-tools/adb
+
+global options:
+ -a         listen on all network interfaces, not just localhost
+ -d         use USB device (error if multiple devices connected)
+ -e         use TCP/IP device (error if multiple TCP/IP devices available)
+ -s SERIAL  use device with given serial (overrides $ANDROID_SERIAL)
+ -t ID      use device with given transport id
+ -H         name of adb server host [default=localhost]
+ -P         port of adb server [default=5037]
+ -L SOCKET  listen on given socket for adb server [default=tcp:localhost:5037]
+
+general commands:
+ devices [-l]             list connected devices (-l for long output)
+ help                     show this help message
+ version                  show version num
+
+networking:
+ connect HOST[:PORT]      connect to a device via TCP/IP [default port=5555]
+ disconnect [HOST[:PORT]]
+     disconnect from given TCP/IP device [default port=5555], or all
+ pair HOST[:PORT] [PAIRING CODE]
+     pair with a device for secure TCP/IP communication
+ forward --list           list all forward socket connections
+ forward [--no-rebind] LOCAL REMOTE
+     forward socket connection using:
+       tcp:<port> (<local> may be "tcp:0" to pick any open port)
+       localabstract:<unix domain socket name>
+       localreserved:<unix domain socket name>
+       localfilesystem:<unix domain socket name>
+       dev:<character device name>
+       jdwp:<process pid> (remote only)
+       acceptfd:<fd> (listen only)
+ forward --remove LOCAL   remove specific forward socket connection
+ forward --remove-all     remove all forward socket connections
+ ppp TTY [PARAMETER...]   run PPP over USB
+ reverse --list           list all reverse socket connections from device
+ reverse [--no-rebind] REMOTE LOCAL
+     reverse socket connection using:
+       tcp:<port> (<remote> may be "tcp:0" to pick any open port)
+       localabstract:<unix domain socket name>
+       localreserved:<unix domain socket name>
+       localfilesystem:<unix domain socket name>
+ reverse --remove REMOTE  remove specific reverse socket connection
+ reverse --remove-all     remove all reverse socket connections from device
+ mdns check               check if mdns discovery is available
+ mdns services            list all discovered services
+
+file transfer:
+ push [--sync] [-z ALGORITHM] [-Z] LOCAL... REMOTE
+     copy local files/directories to device
+     --sync: only push files that are newer on the host than the device
+     -n: dry run: push files to device without storing to the filesystem
+     -z: enable compression with a specified algorithm (any, none, brotli)
+     -Z: disable compression
+ pull [-a] [-z ALGORITHM] [-Z] REMOTE... LOCAL
+     copy files/dirs from device
+     -a: preserve file timestamp and mode
+     -z: enable compression with a specified algorithm (any, none, brotli)
+     -Z: disable compression
+ sync [-l] [-z ALGORITHM] [-Z] [all|data|odm|oem|product|system|system_ext|vendor]
+     sync a local build from $ANDROID_PRODUCT_OUT to the device (default all)
+     -n: dry run: push files to device without storing to the filesystem
+     -l: list files that would be copied, but don't copy them
+     -z: enable compression with a specified algorithm (any, none, brotli)
+     -Z: disable compression
+
+shell:
+ shell [-e ESCAPE] [-n] [-Tt] [-x] [COMMAND...]
+     run remote shell command (interactive shell if no command given)
+     -e: choose escape character, or "none"; default '~'
+     -n: don't read from stdin
+     -T: disable pty allocation
+     -t: allocate a pty if on a tty (-tt: force pty allocation)
+     -x: disable remote exit codes and stdout/stderr separation
+ emu COMMAND              run emulator console command
+
+app installation (see also `adb shell cmd package help`):
+ install [-lrtsdg] [--instant] PACKAGE
+     push a single package to the device and install it
+ install-multiple [-lrtsdpg] [--instant] PACKAGE...
+     push multiple APKs to the device for a single package and install them
+ install-multi-package [-lrtsdpg] [--instant] PACKAGE...
+     push one or more packages to the device and install them atomically
+     -r: replace existing application
+     -t: allow test packages
+     -d: allow version code downgrade (debuggable packages only)
+     -p: partial application install (install-multiple only)
+     -g: grant all runtime permissions
+     --abi ABI: override platform's default ABI
+     --instant: cause the app to be installed as an ephemeral install app
+     --no-streaming: always push APK to device and invoke Package Manager as separate steps
+     --streaming: force streaming APK directly into Package Manager
+     --fastdeploy: use fast deploy
+     --no-fastdeploy: prevent use of fast deploy
+     --force-agent: force update of deployment agent when using fast deploy
+     --date-check-agent: update deployment agent when local version is newer and using fast deploy
+     --version-check-agent: update deployment agent when local version has different version code and using fast deploy
+     --local-agent: locate agent files from local source build (instead of SDK location)
+     (See also `adb shell pm help` for more options.)
+ uninstall [-k] PACKAGE
+     remove this app package from the device
+     '-k': keep the data and cache directories
+
+debugging:
+ bugreport [PATH]
+     write bugreport to given PATH [default=bugreport.zip];
+     if PATH is a directory, the bug report is saved in that directory.
+     devices that don't support zipped bug reports output to stdout.
+ jdwp                     list pids of processes hosting a JDWP transport
+ logcat                   show device log (logcat --help for more)
+
+security:
+ disable-verity           disable dm-verity checking on userdebug builds
+ enable-verity            re-enable dm-verity checking on userdebug builds
+ keygen FILE
+     generate adb public/private key; private key stored in FILE,
+
+scripting:
+ wait-for[-TRANSPORT]-STATE...
+     wait for device to be in a given state
+     STATE: device, recovery, rescue, sideload, bootloader, or disconnect
+     TRANSPORT: usb, local, or any [default=any]
+ get-state                print offline | bootloader | device
+ get-serialno             print <serial-number>
+ get-devpath              print <device-path>
+ remount [-R]
+      remount partitions read-write. if a reboot is required, -R will
+      will automatically reboot the device.
+ reboot [bootloader|recovery|sideload|sideload-auto-reboot]
+     reboot the device; defaults to booting system image but
+     supports bootloader and recovery too. sideload reboots
+     into recovery and automatically starts sideload mode,
+     sideload-auto-reboot is the same but reboots after sideloading.
+ sideload OTAPACKAGE      sideload the given full OTA package
+ root                     restart adbd with root permissions
+ unroot                   restart adbd without root permissions
+ usb                      restart adbd listening on USB
+ tcpip PORT               restart adbd listening on TCP on PORT
+
+internal debugging:
+ start-server             ensure that there is a server running
+ kill-server              kill the server if it is running
+ reconnect                kick connection from host side to force reconnect
+ reconnect device         kick connection from device side to force reconnect
+ reconnect offline        reset offline/unauthorized devices to force reconnect
+
+environment variables:
+ $ADB_TRACE
+     comma-separated list of debug info to log:
+     all,adb,sockets,packets,rwx,usb,sync,sysdeps,transport,jdwp
+ $ADB_VENDOR_KEYS         colon-separated list of keys (files or directories)
+ $ANDROID_SERIAL          serial number to connect to (see -s)
+ $ANDROID_LOG_TAGS        tags to be used by logcat (see logcat --help)
+ $ADB_LOCAL_TRANSPORT_MAX_PORT max emulator scan port (default 5585, 16 emus)
+ $ADB_MDNS_AUTO_CONNECT   comma-separated list of mdns services to allow auto-connect (default adb-tls-connect)
+
+"""
+
 from __future__ import annotations
 
 import os
@@ -8,7 +170,7 @@ import re
 import shutil
 import subprocess
 import time
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 import zope.event
 
@@ -37,7 +199,7 @@ class Device(object):
 
     @property
     def transport_id(self):
-        return self._attrs['transport_id']
+        return self._attrs['transport_id'] if 'transport_id' in self._attrs else None
 
     def is_usb(self) -> bool:
         """
@@ -97,17 +259,16 @@ class Device(object):
 
 class ADBCommandResult(object):
     RESULT_OK = 0
+    RESULT_ERROR = 1
 
-    def __init__(self, result: Optional[str], code: int):
+    def __init__(self, result: Tuple[Optional[bytes], Optional[bytes]] = (None, None), code: int = RESULT_OK):
         super(ADBCommandResult, self).__init__()
-        self._result = result
+        self._stdout = result[0].decode("utf-8").strip() if result[0] else None
+        self._stderr = result[1].decode('utf-8').strip() if result[1] else None
         self._code = code
 
-    def __iter__(self):
-        return (self._result, self._code).__iter__()
-
     def __str__(self):
-        return f"Result(code={self._code}, result={self._result})"
+        return f"Result(code={self._code}, stdout={self._stdout}, stderr={self._stderr})"
 
     @property
     def code(self):
@@ -118,7 +279,10 @@ class ADBCommandResult(object):
         return self._code
 
     @property
-    def result(self): return self._result
+    def stdout(self): return self._stdout
+
+    @property
+    def stderr(self): return self._stderr
 
 
 def log():
@@ -135,11 +299,6 @@ def get_adb_path() -> str:
     global adb_path
     if adb_path is None:
         adb_path = shutil.which("adb")
-
-        # if adb_path is None:
-        #     from libs2 import platform
-        #     adb_path = platform.get_platform().get_adb_path()
-
         log().debug(f"Found adb: {adb_path}")
 
     assert adb_path
@@ -164,38 +323,34 @@ def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     """
     result = shell(f"which {command}", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK:
-        return result.result
+        return result.stdout
     return None
 
 
 def execute(command: str,
             ip: Optional[str] = None,
-            *args,
             **kwargs) -> bool:
     """
     Execute an adb command on the given device, if connected
-    :param command:     command to execute
-    :param ip:   device ip
-    :param args:        optional list of arguments to pass to command
+    :param command: command to execute
+    :param ip:      device identifier
     :param kwargs:
     :return:
     """
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    final_command = "{} {}{}".format(adb, ip_arg, (command % args)).split()
-    command_log = "{} {}{}".format(os.path.basename(adb), ip_arg, (command % args)).split()
+    command_line = f"{ip_arg}{command} {get_extra_arguments(**kwargs)}"
+    command_full = f"{adb} {command_line}"
+    command_log = f"adb {command_line}"
     output = subprocess.PIPE if "stdout" not in kwargs else kwargs["stdout"]
 
     try:
-        log().spam(f"Executing `{' '.join(command_log)}`")
-        out = subprocess.Popen(final_command, stderr=subprocess.STDOUT, stdout=output)
+        log().spam(f"Executing `{command_log}`")
+        out = subprocess.Popen(command_full.split(), stderr=subprocess.STDOUT, stdout=output)
         result = out.communicate()
         if not command == "get-state":
-            log().spam(
-                "Result: `%s` (code:%s)" % (
-                    result[0].decode("utf-8").strip() if result[0] else "None",
-                    out.returncode)
-            )
+            result_str = result[0].decode("utf-8").strip() if result[0] else "None"
+            log().spam(f"Result(code={result_str}, result={out.returncode})")
         return out.returncode == ADBCommandResult.RESULT_OK
     except subprocess.CalledProcessError:
         return False
@@ -204,28 +359,29 @@ def execute(command: str,
 def capture_output(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
-    :param command:         command to execute
-    :param ip:       device address ip
-    :param kwargs:
+    :param command:  command to execute
+    :param ip:       device id
+    :param kwargs:   if contains the 'args' key, its value is passed as arguments to the input command
     :return:
     """
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
-    command1 = "{} {}{}".format(adb, ip_arg, command).split()
-    command_log = "{} {}{}".format(os.path.basename(adb), ip_arg, command).split()
+    command_line = f"{ip_arg}{command} {get_extra_arguments(**kwargs)}"
+    command_full = f"{adb} {command_line}"
+    command_log = f"adb {command_line}"
     try:
-        log().spam("Executing `%s`" % " ".join(command_log))
+        log().spam(f"Executing `{command_log}`")
         out = subprocess.Popen(
-            command1,
+            command_full.split(),
             stderr=subprocess.STDOUT,
             stdout=subprocess.PIPE,
-            shell=kwargs.get("shell", False),
+            shell=False,
         )
         result = out.communicate()
-        return ADBCommandResult(result[0].decode("utf-8").strip(), out.returncode)
+        return ADBCommandResult(result, out.returncode)
     except subprocess.CalledProcessError as e:
         log().warning(e)
-        return ADBCommandResult(None, 1)
+        return ADBCommandResult(code=ADBCommandResult.RESULT_ERROR)
 
 
 def shell(command: str, ip: Optional[str] = None) -> ADBCommandResult:
@@ -249,7 +405,7 @@ def shell(command: str, ip: Optional[str] = None) -> ADBCommandResult:
         shell=False,
     )
     result = out.communicate()
-    return ADBCommandResult(result[0].decode("UTF-8").strip(), out.returncode)
+    return ADBCommandResult(result, out.returncode)
 
 
 def busybox(command: str, ip: Optional[str] = None) -> ADBCommandResult:
@@ -314,22 +470,29 @@ def is_root(ip: Optional[str] = None) -> bool:
     :param ip:              device ip
     :return:                True if adb is running as root
     """
-    result, code = shell("whoami", ip=ip)
-    return result == "root"
+    result = shell("whoami", ip=ip)
+    if result.code == ADBCommandResult.RESULT_OK:
+        return result.stdout == "root"
+    return False
 
 
-def devices() -> List[Device]:
+def devices(**kwargs) -> List[str]:
     """
     Return a list of attached devices
+    :param kwargs: extra arguments
     :return:
     """
-    result = capture_output("devices -l")
-    if result.code == ADBCommandResult.RESULT_OK and result.result:
-        attached_devices = list(map(lambda x: x.split("\t")[0], result.result.split("\n")[1:]))
-        result = list(filter(lambda y: y is not None, map(lambda x: Device.parse(x), attached_devices)))
-        return result
+    result = capture_output(command="devices", **kwargs)
+    if result.code == ADBCommandResult.RESULT_OK:
+        return list(map(lambda x: x.split("\t")[0], result.stdout.split("\n")[1:]))
     else:
         return []
+    # if result.code == ADBCommandResult.RESULT_OK and result.result:
+    #     attached_devices = list(map(lambda x: x.split("\t")[0], result.result.split("\n")[1:]))
+    #     result = list(filter(lambda y: y is not None, map(lambda x: Device.parse(x), attached_devices)))
+    #     return result
+    # else:
+    #     return []
 
 
 def is_connected(ip: Optional[str] = None) -> bool:
@@ -338,9 +501,9 @@ def is_connected(ip: Optional[str] = None) -> bool:
     :param ip:  device ip
     :return: true if connected
     """
-    result = capture_output("get-state", ip=ip)
+    result = capture_output(command="get-state", ip=ip)
     log().spam(result)
-    return result.code == ADBCommandResult.RESULT_OK and result.result == "device"
+    return result.code == ADBCommandResult.RESULT_OK and result.stdout == "device"
 
 
 def connect(ip: str) -> bool:
@@ -445,9 +608,9 @@ def version() -> Optional[str]:
     Fetch and return the current adb version
     :return: the output as returned by 'adb version'
     """
-    result = capture_output("version")
+    result = capture_output(command="version")
     if result.code == ADBCommandResult.RESULT_OK:
-        return result.result
+        return result.stdout
     return None
 
 
@@ -456,7 +619,7 @@ def mdns_services() -> ADBCommandResult:
     Return the result of the command 'adb mdns services'
     :return:
     """
-    return capture_output("mdns services")
+    return capture_output(command="mdns services")
 
 
 def mdns_check() -> ADBCommandResult:
@@ -464,7 +627,7 @@ def mdns_check() -> ADBCommandResult:
     Return the result of the command 'adb mdns check'
     :return:
     """
-    return capture_output("mdns check")
+    return capture_output(command="mdns check")
 
 
 def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
@@ -474,4 +637,12 @@ def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
     :param ip:      optional device ip
     :return:        true on success
     """
-    return execute(f"bugreport {dest}", ip=ip)
+    return execute(f"bugreport", ip=ip, args=(dest if dest else '',))
+
+
+def get_extra_arguments(**kwargs) -> str:
+    if 'args' in kwargs:
+        if not type(kwargs['args']) == tuple:
+            raise RuntimeError('`args` must be a tuple')
+        return ' '.join(kwargs['args'])
+    return ''
