@@ -16,6 +16,7 @@ def log():
 class ADBClient(object):
     def __init__(self, identifier: Optional[str] = None):
         self._identifier = identifier
+        self._busybox = False
 
     @property
     def identifier(self):
@@ -87,6 +88,16 @@ class ADBClient(object):
         if code == ADBCommandResult.RESULT_OK:
             return output
         return None
+
+    def get_properties(self) -> Dict[str, str]:
+        code, output, error = self.shell("getprop")
+        result = dict()
+        if code == ADBCommandResult.RESULT_OK and output:
+            lines = list(map(lambda x: x.split(':', 1), output.splitlines()))
+            for line in lines:
+                item = list(map(lambda y: y.strip()[1:-1], line))
+                result[item[0]] = item[1]
+        return result
 
     def get_mac_address(self) -> Optional[str]:
         result = self.ifconfig()

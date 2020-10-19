@@ -13,10 +13,12 @@ TV_LIB_PACKAGE_NAME = "com.swisscom.android.tv.library"
 class MyTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.client = ADBClient(DEVICE_IP)
+        self.assertTrue(DEVICE_IP, self.client.identifier)
+        self.assertTrue(self.client.connect())
+        self.assertTrue(self.client.is_connected())
 
     def test_001(self):
         print("test_001")
-        self.client.connect()
         code, stdout, stderr = self.client.list_packages()
         self.assertEqual(ADBCommandResult.RESULT_OK, code)
         self.assertIsNotNone(stdout)
@@ -101,6 +103,19 @@ class MyTestCase(unittest.TestCase):
 
         code, result, error = self.client.dumpsys_meminfo("invalid.package")
         self.assertEqual(ADBCommandResult.RESULT_ERROR, code)
+
+    def test_010(self):
+        print("test_010")
+        output = self.client.get_properties()
+        self.assertIsNotNone(output)
+        self.assertIsInstance(output, dict)
+        self.assertTrue("ro.product.model" in output)
+        self.assertTrue("ro.product.name" in output)
+        self.assertTrue("ro.product.device" in output)
+
+        log.debug(f"model: {output['ro.product.model']}")
+        log.debug(f"name: {output['ro.product.name']}")
+        log.debug(f"device: {output['ro.product.device']}")
 
     if __name__ == '__main__':
         unittest.main()
