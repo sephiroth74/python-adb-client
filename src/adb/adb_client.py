@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 import re
 from typing import Optional, Dict
 
@@ -16,11 +17,13 @@ def log():
 class ADBClient(object):
     def __init__(self, identifier: Optional[str] = None):
         self._identifier = identifier
-        self._busybox = False
 
     @property
     def identifier(self):
         return self._identifier
+
+    def has_busybox(self):
+        return self.which("busybox") is not None
 
     def wait_for_device(self) -> bool:
         return adb_connection.wait_for_device(ip=self._identifier)
@@ -40,13 +43,19 @@ class ADBClient(object):
     def root(self):
         self._connect_if_disconnected()
         if not self.is_root():
-            return adb_connection.root(ip=self._identifier)
+            adb_connection.root(ip=self._identifier)
+            adb_connection.reconnect(ip=self._identifier)
+            adb_connection.wait_for_device(ip=self._identifier)
+            return adb_connection.is_root(ip=self._identifier)
         return True
 
     def unroot(self):
         self._connect_if_disconnected()
         if self.is_root():
-            return adb_connection.unroot(ip=self._identifier)
+            adb_connection.unroot(ip=self._identifier)
+            adb_connection.reconnect(ip=self._identifier)
+            adb_connection.wait_for_device(ip=self._identifier)
+            return not adb_connection.is_root(ip=self._identifier)
         return True
 
     def shell(self, command: str, **kwargs):
@@ -126,7 +135,16 @@ class ADBClient(object):
         return self.shell(f"settings put global {key} {value}")
 
     def dumpsys_bluetooth(self):
-        return self.shell("dumpsys bluetooth_manager")
+        return self.dumpsys("bluetooth_manager")
+
+    def dumpsys(self, which: str, **kwargs):
+        """
+        For a list of arguments see: https://developer.android.com/studio/command-line/dumpsys
+        :param which:   which system service to dump
+        :param kwargs:  additional arguments
+        :return:
+        """
+        return self.shell(command=f"dumpsys {which}", **kwargs)
 
     def dumpsys_meminfo(self, package: str):
         if not self.is_installed(package):
@@ -195,11 +213,32 @@ class ADBClient(object):
     def exists(self, path: str) -> bool:
         return self._test_file(path, "e")
 
+    def remove(self, dst: str):
+        return self.shell(f"rm -fr {dst}")
+
     def cat(self, filename: str) -> str:
         code, output, error = self.shell(f"cat {filename}")
         if code != ADBCommandResult.RESULT_OK:
             raise IOError(f"File {filename} not found")
         return output
+
+    def which(self, command: str) -> Optional[str]:
+        self._connect_if_disconnected()
+        return adb_connection.which(command=command, ip=self._identifier)
+
+    def ls(self, dirname: str, **kwargs):
+        args = adb_connection.expand_extra_arguments(**kwargs)
+        args.append(dirname)
+        # result = self.shell(f"busybox ls -lHha --color=none {dirname}")
+        return self.shell(f"ls", args=args)
+
+    def busybox(self, command: str, **kwargs):
+        return self.shell(f"busybox {command}", **kwargs)
+
+    def push(self, src: str, dst: str) -> bool:
+        log().notice("--> Push `{}` into `{}`...".format(src, dst))
+        assert os.path.exists(src)
+        return self.execute(f"push {src} {dst}")
 
     """ -----------------------------------------------------------------------"""
     """ Key Events """

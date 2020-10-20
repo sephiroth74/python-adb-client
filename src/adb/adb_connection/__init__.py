@@ -289,6 +289,12 @@ class ADBCommandResult(object):
 
     def error(self): return self._stderr
 
+    def is_ok(self):
+        return self.code == ADBCommandResult.RESULT_OK
+
+    def is_error(self):
+        return not self.is_ok()
+
     @staticmethod
     def from_error(code: int = RESULT_ERROR):
         return ADBCommandResult(result=(None, None), code=code)
@@ -331,7 +337,7 @@ def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     :return: the command path on the device, if found
     """
     result = shell(f"which {command}", ip=ip)
-    if result.code == ADBCommandResult.RESULT_OK:
+    if result.code == ADBCommandResult.RESULT_OK and len(result.output()) > 0:
         return result.output()
     return None
 
@@ -411,12 +417,13 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     out = subprocess.Popen(
         command_full.split(),
         stdin=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,
         shell=False,
     )
     result = out.communicate()
-    return ADBCommandResult(result, out.returncode)
+    code = out.returncode
+    return ADBCommandResult(result, code)
 
 
 def busybox(command: str, ip: Optional[str] = None) -> ADBCommandResult:
@@ -437,8 +444,8 @@ def wait_for_device(ip: Optional[str] = None) -> bool:
     :param ip:              device ip
     :return:                true if device connects
     """
-    if is_connected(ip=ip):
-        return True
+    # if is_connected(ip=ip):
+    #     return True
 
     execute(
         "wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 143'",
@@ -447,17 +454,48 @@ def wait_for_device(ip: Optional[str] = None) -> bool:
     return is_connected(ip=ip)
 
 
+def reconnect(ip: Optional[str] = None) -> bool:
+    """
+    kick connection from host side to force reconnect
+
+    :param ip:  device id
+    :return:    true on success
+    """
+    return execute("reconnect", ip=ip)
+
+
+def reconnect_device(ip: Optional[str] = None) -> bool:
+    """
+    kick connection from device side to force reconnect
+    :param ip:  device id
+    :return:    true on success
+    """
+    return execute("reconnect device", ip=ip)
+
+
+def reconnect_offline(ip: Optional[str] = None) -> bool:
+    """
+    reset offline/unauthorized devices to force reconnect
+
+    :param ip:  device id
+    :return:    true on success
+    """
+    return execute("reconnect offline", ip=ip)
+
+
 def root(ip: Optional[str] = None) -> bool:
     """
     Restart adb connection as root
     :param ip:              device ip
     :return:                true if root succeded
     """
-    if is_root(ip=ip):
-        return True
-    execute("root", ip=ip)
-    wait_for_device(ip=ip)
-    return is_root(ip=ip)
+    # if is_root(ip=ip):
+    #     return True
+    # execute("root", ip=ip)
+    # execute("reconnect", ip=ip)
+    # wait_for_device(ip=ip)
+    # return is_root(ip=ip)
+    return execute("root", ip=ip)
 
 
 # noinspection SpellCheckingInspection
@@ -467,12 +505,14 @@ def unroot(ip: Optional[str] = None) -> bool:
     :param ip:              device ip
     :return:                True on success
     """
-    if not is_root(ip=ip):
-        return True
-
-    execute("unroot", ip=ip)
-    wait_for_device(ip=ip)
-    return not is_root(ip=ip)
+    # if not is_root(ip=ip):
+    #     return True
+    #
+    # execute("unroot", ip=ip)
+    # reconnect(ip=ip)
+    # wait_for_device(ip=ip)
+    # return not is_root(ip=ip)
+    return execute("unroot", ip=ip)
 
 
 def is_root(ip: Optional[str] = None) -> bool:
@@ -483,6 +523,7 @@ def is_root(ip: Optional[str] = None) -> bool:
     """
     result = shell("whoami", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK:
+        log().spam(f"whoami: {result.output()}")
         return result.output() == "root"
     return False
 
@@ -653,7 +694,15 @@ def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
 
 def get_extra_arguments(**kwargs) -> str:
     if 'args' in kwargs:
-        if not type(kwargs['args']) == tuple:
-            raise RuntimeError('`args` must be a tuple')
+        if not isinstance(kwargs['args'], (tuple, list)):
+            raise RuntimeError(f'`args` must be either a tuple or a list, got {type(kwargs["args"])} instead')
         return ' '.join(filter(lambda x: x is not None, kwargs['args']))
     return ''
+
+
+def expand_extra_arguments(**kwargs) -> List[str]:
+    if 'args' in kwargs:
+        if not isinstance(kwargs['args'], (tuple, list)):
+            raise RuntimeError('`args` must be either a tuple or a list')
+        return list(filter(lambda x: x is not None, kwargs['args']))
+    return []
