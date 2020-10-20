@@ -89,7 +89,7 @@ class ADBClient(object):
         self._connect_if_disconnected()
         if not self.is_root():
             adb_connection.root(ip=self._identifier)
-            self.reconnect()
+            self.reconnect_device()
             self.wait_for_device()
             return adb_connection.is_root(ip=self._identifier)
         return True
@@ -98,7 +98,7 @@ class ADBClient(object):
         self._connect_if_disconnected()
         if self.is_root():
             adb_connection.unroot(ip=self._identifier)
-            self.reconnect()
+            self.reconnect_device()
             self.wait_for_device()
             return not adb_connection.is_root(ip=self._identifier)
         return True

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from adb import KeyCodes
 from adb import ADBClient
-from adb.adb_connection import ADBCommandResult
+from adb.adb_connection import disconnect_all, ADBCommandResult
 from . import get_logger
 from .test_const import DEVICE_IP, DEBUG_APK, DEBUG_APK_PACKAGE
 
@@ -17,13 +17,25 @@ THIS_FILE_NAME = os.path.basename(__file__)
 
 
 class MyTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        disconnect_all()
+
     def setUp(self) -> None:
         self.client = ADBClient(DEVICE_IP)
         self.assertTrue(DEVICE_IP, self.client.identifier)
         self.assertTrue(self.client.connect())
         self.assertTrue(self.client.is_connected())
-        if self.client.is_root():
-            self.client.unroot()
+        # if self.client.is_root():
+        #     self.client.unroot()
+
+    def test_000(self):
+        print("test_000")
+        self.client.root()
+        self.assertTrue(self.client.is_root())
+        self.client.unroot()
+        self.assertFalse(self.client.is_root())
 
     def test_001(self):
         print("test_001")
