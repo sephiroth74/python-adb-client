@@ -169,7 +169,7 @@ import re
 import shutil
 import subprocess
 import time
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 
 import zope.event
 
@@ -692,17 +692,40 @@ def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
     return execute(f"bugreport", ip=ip, args=(dest if dest else '',))
 
 
+def push(ip: Optional[str], src: str, dst: str, **kwargs) -> bool:
+    return execute(command=f"push", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
+
+
+def pull(ip: Optional[str], src: str, dst: str, **kwargs):
+    return execute(command=f"pull", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
+
+
+""" Utilities """
+
+
 def get_extra_arguments(**kwargs) -> str:
+    _check_extra_arguments_type(**kwargs)
     if 'args' in kwargs:
-        if not isinstance(kwargs['args'], (tuple, list)):
-            raise RuntimeError(f'`args` must be either a tuple or a list, got {type(kwargs["args"])} instead')
         return ' '.join(filter(lambda x: x is not None, kwargs['args']))
     return ''
 
 
 def expand_extra_arguments(**kwargs) -> List[str]:
+    _check_extra_arguments_type(**kwargs)
     if 'args' in kwargs:
-        if not isinstance(kwargs['args'], (tuple, list)):
-            raise RuntimeError('`args` must be either a tuple or a list')
         return list(filter(lambda x: x is not None, kwargs['args']))
     return []
+
+
+def extends_extra_arguments(*args, **kwargs) -> Dict[Any, Any]:
+    _check_extra_arguments_type(**kwargs)
+    newlist = expand_extra_arguments(**kwargs)
+    newlist.extend(args)
+    kwargs['args'] = newlist
+    return kwargs
+
+
+def _check_extra_arguments_type(**kwargs):
+    if 'args' in kwargs:
+        if not isinstance(kwargs['args'], (tuple, list)):
+            raise RuntimeError(f'`args` must be either a tuple or a list, got {type(kwargs["args"])} instead')

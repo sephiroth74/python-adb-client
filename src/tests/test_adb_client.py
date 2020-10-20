@@ -1,5 +1,6 @@
 import os
 import unittest
+from pathlib import Path
 
 from adb import KeyCodes
 from adb import ADBClient
@@ -178,6 +179,21 @@ class MyTestCase(unittest.TestCase):
         with open(__file__, "r") as fp:
             this_text = fp.read().strip()
             self.assertTrue(result == this_text)
+
+    def test_014(self):
+        print("test_014")
+
+        self.assertTrue(self.client.push(__file__, f"/sdcard/{THIS_FILE_NAME}"))
+
+        dest_file = Path(os.path.expanduser("~")) / "Desktop" / THIS_FILE_NAME
+        if dest_file.exists():
+            dest_file.unlink(True)
+
+        # test dry run
+        self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-n",))
+        self.assertFalse(dest_file.exists())
+        self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-z", "brotli",))
+        dest_file.unlink()
 
     if __name__ == '__main__':
         unittest.main()

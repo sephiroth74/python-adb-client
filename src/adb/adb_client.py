@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+from pathlib import Path
 from typing import Optional, Dict
 
 from . import adb_connection
@@ -229,16 +230,25 @@ class ADBClient(object):
     def ls(self, dirname: str, **kwargs):
         args = adb_connection.expand_extra_arguments(**kwargs)
         args.append(dirname)
-        # result = self.shell(f"busybox ls -lHha --color=none {dirname}")
         return self.shell(f"ls", args=args)
 
     def busybox(self, command: str, **kwargs):
         return self.shell(f"busybox {command}", **kwargs)
 
-    def push(self, src: str, dst: str) -> bool:
-        log().notice("--> Push `{}` into `{}`...".format(src, dst))
-        assert os.path.exists(src)
-        return self.execute(f"push {src} {dst}")
+    def push(self, src: Path, dst: str, **kwargs) -> bool:
+        log().notice(f"--> Push `{src}` into `{dst}`...")
+        self._connect_if_disconnected()
+        return adb_connection.push(ip=self._identifier, src=str(src), dst=dst, **kwargs)
+
+    def pull(self, src: str, dst: Path, **kwargs):
+        log().notice(f"<-- Pull `{src}` into `{dst}`...")
+        self._connect_if_disconnected()
+        final_dst = dst
+        if dst.is_dir():
+            if not dst.exists():
+                raise IOError(f"{dst} does not exist")
+            final_dst = dst / os.path.basename(src)
+        return adb_connection.pull(ip=self._identifier, src=src, dst=str(final_dst), **kwargs)
 
     """ -----------------------------------------------------------------------"""
     """ Key Events """
