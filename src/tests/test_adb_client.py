@@ -245,15 +245,6 @@ class MyTestCase(unittest.TestCase):
         else:
             log.warning("failed to grant permission")
 
-    # result = self.client.clear_package("com.swisscom.swisscomTv")
-    # self.assertTrue(result.is_ok())
-    #
-    # result = self.client.uninstall_package("com.swisscom.swisscomTv", args=("--user", "0"))
-    # print(result)
-    # self.assertTrue(result.is_ok())
-    #
-    # self.assertFalse(self.client.is_package_installed("com.swisscom.swisscomTv"))
-
 
 if __name__ == '__main__':
     unittest.main()
