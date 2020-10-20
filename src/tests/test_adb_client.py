@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 import unittest
 from pathlib import Path
@@ -6,7 +9,7 @@ from adb import KeyCodes
 from adb import ADBClient
 from adb.adb_connection import ADBCommandResult
 from . import get_logger
-from .test_const import DEVICE_IP
+from .test_const import DEVICE_IP, DEBUG_APK, DEBUG_APK_PACKAGE
 
 log = get_logger("==> test_adb_client")
 
@@ -38,8 +41,8 @@ class MyTestCase(unittest.TestCase):
         packages = self.client.packages("com.android.bluetooth")
         self.assertEqual(list, type(packages))
         self.assertTrue(len(packages) > 0)
-        self.assertTrue(self.client.is_installed("com.android.bluetooth"))
-        self.assertFalse(self.client.is_installed("com.test.1.bluetooth"))
+        self.assertTrue(self.client.is_package_installed("com.android.bluetooth"))
+        self.assertFalse(self.client.is_package_installed("com.test.1.bluetooth"))
 
     def test_003(self):
         print("test_003")
@@ -91,12 +94,12 @@ class MyTestCase(unittest.TestCase):
 
     def test_007(self):
         print("test_007")
-        code, output, error = self.client.get_package_info("com.android.bluetooth")
+        code, output, error = self.client.dump_package("com.android.bluetooth")
         self.assertEqual(ADBCommandResult.RESULT_OK, code)
         self.assertIsNotNone(output)
         self.assertTrue(len(output) > 0)
 
-        code, output, error = self.client.get_package_info("invalid.package.name")
+        code, output, error = self.client.dump_package("invalid.package.name")
         self.assertEqual(ADBCommandResult.RESULT_ERROR, code)
         self.assertIsNone(output)
 
@@ -193,7 +196,64 @@ class MyTestCase(unittest.TestCase):
         self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-n",))
         self.assertFalse(dest_file.exists())
         self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-z", "brotli",))
+
+        self.assertTrue(dest_file.exists())
         dest_file.unlink()
 
-    if __name__ == '__main__':
-        unittest.main()
+    def test_015(self):
+        print("test_015")
+        result = self.client.get_runtime_permissions("com.android.bluetooth")
+        self.assertTrue(len(result) > 0)
+
+    def test_016(self):
+        print("test_016")
+        result = self.client.get_package_apk("com.android.bluetooth")
+        log.debug(f"apk location: {result}")
+        self.assertIsNotNone(result)
+        self.assertTrue(result.endswith(".apk"))
+
+    def test_017(self):
+        apk_file = Path(DEBUG_APK)
+
+        if self.client.is_package_installed(DEBUG_APK_PACKAGE):
+            self.assertEqual(ADBCommandResult.RESULT_OK, self.client.uninstall_package(DEBUG_APK_PACKAGE).code)
+
+        self.assertFalse(self.client.is_package_installed(DEBUG_APK_PACKAGE))
+
+        result = self.client.install_package(apk_file)
+        log.debug(f"result = {result}")
+        self.assertTrue(result.is_ok())
+        self.assertTrue(self.client.is_package_installed(DEBUG_APK_PACKAGE))
+
+        log.debug("runtime permissions:")
+        for key, value in self.client.get_runtime_permissions(DEBUG_APK_PACKAGE).items():
+            log.spam(f"{key} = {value}")
+
+        log.debug("install permissions:")
+        for key, value in self.client.get_install_permissions(DEBUG_APK_PACKAGE).items():
+            log.spam(f"{key} = {value}")
+
+        log.debug("requested permissions:")
+        for line in self.client.get_requested_permissions(DEBUG_APK_PACKAGE):
+            log.spam(f"permission={line}")
+
+        if self.client.grant_runtime_permission(DEBUG_APK_PACKAGE, "android.permission.ACCESS_FINE_LOCATION").is_ok():
+            permissions = dict(filter(lambda x: x[0] == "android.permission.ACCESS_FINE_LOCATION" and x[1],
+                                      self.client.get_runtime_permissions(DEBUG_APK_PACKAGE).items()))
+            log.debug(f"granted: {permissions}")
+            self.assertTrue(len(permissions) == 1)
+        else:
+            log.warning("failed to grant permission")
+
+    # result = self.client.clear_package("com.swisscom.swisscomTv")
+    # self.assertTrue(result.is_ok())
+    #
+    # result = self.client.uninstall_package("com.swisscom.swisscomTv", args=("--user", "0"))
+    # print(result)
+    # self.assertTrue(result.is_ok())
+    #
+    # self.assertFalse(self.client.is_package_installed("com.swisscom.swisscomTv"))
+
+
+if __name__ == '__main__':
+    unittest.main()

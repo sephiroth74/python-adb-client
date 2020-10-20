@@ -1,18 +1,51 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import os
 import re
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Tuple
 
 from . import adb_connection
 from .adb_connection import ADBCommandResult
+
+__all__ = ['ADBClient']
 
 
 def log():
     from . import _logger
     logger = _logger.get_logger(__name__)
     return logger
+
+
+def _parse_dump_permissions(headline: str, input_str: str) -> Dict[str, bool]:
+    found = False
+    leading_spaces = 0
+    permissions = dict()
+    for line in input_str.splitlines():
+        if line.strip() == headline:
+            leading_spaces = len(line) - len(line.lstrip())
+            found = True
+            continue
+
+        if found:
+            if len(line) - len(line.lstrip()) == leading_spaces:
+                found = False
+                continue
+
+            line = line.strip()
+            if len(line) == 0:
+                found = False
+                continue
+
+            splitted_line = line.split(":")
+            if len(splitted_line) == 2:
+                name = splitted_line[0]
+                granted = splitted_line[1].split("=")[1].strip()
+                permissions[name] = granted == "true"
+            else:
+                permissions[splitted_line[0]] = False
+    return permissions
 
 
 class ADBClient(object):
@@ -27,6 +60,8 @@ class ADBClient(object):
         return self.which("busybox") is not None
 
     def wait_for_device(self) -> bool:
+        if self.is_connected():
+            return True
         return adb_connection.wait_for_device(ip=self._identifier)
 
     def connect(self):
@@ -38,6 +73,15 @@ class ADBClient(object):
     def is_connected(self):
         return adb_connection.is_connected(ip=self._identifier)
 
+    def reconnect(self):
+        return adb_connection.reconnect(ip=self._identifier)
+
+    def reconnect_device(self):
+        return adb_connection.reconnect_device(ip=self._identifier)
+
+    def reconnect_offline(self):
+        return adb_connection.reconnect_offline(ip=self._identifier)
+
     def is_root(self):
         return adb_connection.is_root(ip=self._identifier)
 
@@ -45,8 +89,8 @@ class ADBClient(object):
         self._connect_if_disconnected()
         if not self.is_root():
             adb_connection.root(ip=self._identifier)
-            adb_connection.reconnect(ip=self._identifier)
-            adb_connection.wait_for_device(ip=self._identifier)
+            self.reconnect()
+            self.wait_for_device()
             return adb_connection.is_root(ip=self._identifier)
         return True
 
@@ -54,8 +98,8 @@ class ADBClient(object):
         self._connect_if_disconnected()
         if self.is_root():
             adb_connection.unroot(ip=self._identifier)
-            adb_connection.reconnect(ip=self._identifier)
-            adb_connection.wait_for_device(ip=self._identifier)
+            self.reconnect()
+            self.wait_for_device()
             return not adb_connection.is_root(ip=self._identifier)
         return True
 
@@ -145,23 +189,19 @@ class ADBClient(object):
         :param kwargs:  additional arguments
         :return:
         """
-        return self.shell(command=f"dumpsys {which}", **kwargs)
+        return self.shell(command=f"dumpsys",
+                          **adb_connection.extends_extra_arguments(which, **kwargs))
 
     def dumpsys_meminfo(self, package: str):
-        if not self.is_installed(package):
+        if not self.is_package_installed(package):
             return ADBCommandResult.from_error(ADBCommandResult.RESULT_ERROR)
         return self.shell(f"dumpsys meminfo {package}")
-
-    def get_package_info(self, package_name: str):
-        if not self.is_installed(package_name):
-            return ADBCommandResult.from_error(ADBCommandResult.RESULT_ERROR)
-        return self.shell(f"pm dump {package_name}")
 
     def ifconfig(self):
         return self.shell("ifconfig")
 
     def dump_package(self, package: str):
-        if not self.is_installed(package):
+        if not self.is_package_installed(package):
             return ADBCommandResult.from_error(ADBCommandResult.RESULT_ERROR)
         return self.shell(f"pm dump {package}")
 
@@ -171,7 +211,7 @@ class ADBClient(object):
             return list(map(lambda x: x.replace("package:", "").strip(), result.splitlines()))
         return []
 
-    def is_installed(self, package: str) -> bool:
+    def is_package_installed(self, package: str) -> bool:
         return package in self.packages(package)
 
     def list_packages(self, package: Optional[str] = None, **kwargs):
@@ -196,7 +236,8 @@ class ADBClient(object):
         :param kwargs:
         :return:
         """
-        return self.shell(f"cmd package list packages {package if package else ''}", **kwargs)
+        return self.shell(f"cmd package list packages",
+                          **adb_connection.extends_extra_arguments(f"{package if package else ''}", **kwargs))
 
     """ -----------------------------------------------------------------------"""
     """ File system methods """
@@ -250,6 +291,74 @@ class ADBClient(object):
             final_dst = dst / os.path.basename(src)
         return adb_connection.pull(ip=self._identifier, src=src, dst=str(final_dst), **kwargs)
 
+    def get_package_apk(self, package: str) -> Optional[str]:
+        # noinspection RegExpRedundantEscape
+        pattern = re.compile("package:(.*\\.apk)?=?([\\w\\.]+)( installer=[\\w\\.]+)?( uid:[\\w]+)?")
+        result = self.list_packages(package, args=("-f",))
+        if result.is_ok():
+            for line in result.output().splitlines():
+                match = re.match(pattern, line)
+                if match:
+                    if match.group(2) == package:
+                        return match.group(1)
+        return None
+
+    def install_package(self, apk: Path, **kwargs):
+        """
+
+        :param apk:
+        :param kwargs:
+        :return:
+        """
+        log().info(f"Installing {apk}...")
+        return self.capture_output(command="install",
+                                   **adb_connection.extends_extra_arguments(str(apk), **kwargs))
+
+    def install_multi_package(self, *apks, **kwargs):
+        """
+        Not available on all adb clients
+
+        install-multi-package [-lrtsdpg] [--instant] PACKAGE...
+            push one or more packages to the device and install them atomically
+            -r: replace existing application
+            -t: allow test packages
+            -d: allow version code downgrade (debuggable packages only)
+            -p: partial application install (install-multiple only)
+            -g: grant all runtime permissions
+            --abi ABI: override platform's default ABI
+            --instant: cause the app to be installed as an ephemeral install app
+            --no-streaming: always push APK to device and invoke Package Manager as separate steps
+            --streaming: force streaming APK directly into Package Manager
+            --fastdeploy: use fast deploy
+            --no-fastdeploy: prevent use of fast deploy
+            --force-agent: force update of deployment agent when using fast deploy
+            --date-check-agent: update deployment agent when local version is newer and using fast deploy
+            --version-check-agent: update deployment agent when local version has different version code and using fast deploy
+            --local-agent: locate agent files from local source build (instead of SDK location)
+            (See also `adb shell pm help` for more options.)
+        :param apk:
+        :param kwargs:
+        :return:
+        """
+        return self.capture_output(command="install-multi-package",
+                                   **adb_connection.extends_extra_arguments(*list(map(lambda x: str(x), apks)), **kwargs))
+
+    def uninstall_package(self, package: str, **kwargs):
+        """
+        uninstall [-k] PACKAGE
+            remove this app package from the device
+            '-k': keep the data and cache directories
+        """
+        log().info(f"Uninstalling {package}...")
+        return self.shell("pm uninstall",
+                          **adb_connection.extends_extra_arguments(str(package), **kwargs))
+
+    def clear_package(self, package: str, **kwargs):
+        log().info(f"Clearing {package}")
+
+        return self.shell("pm clear",
+                          **adb_connection.extends_extra_arguments(str(package), **kwargs))
+
     """ -----------------------------------------------------------------------"""
     """ Key Events """
     """ -----------------------------------------------------------------------"""
@@ -300,6 +409,54 @@ class ADBClient(object):
         assert type(char) is str
         log().verbose(f"Sending {char}...")
         return self.shell(f"input text {char}")
+
+    """ -----------------------------------------------------------------------"""
+    """ Permissions """
+    """ -----------------------------------------------------------------------"""
+
+    def grant_runtime_permission(self, package: str, permission: str):
+        log().verbose(f"Granting '{permission}' to '{package}'...")
+        return self.shell(f"pm grant {package} {permission}")
+
+    def revoke_runtime_permission(self, package: str, permission: str):
+        log().verbose(f"Revoking '{permission}' from '{package}'...")
+        return self.shell(f"pm revoke {package} {permission}")
+
+    def get_runtime_permissions(self, package: str):
+        """
+        Returns the package runtime permissions
+        :param package:
+        :return:
+        """
+        log().verbose(f"Fetching runtime permissions for `{package}`...")
+        code, output, error = self.dump_package(package)
+        if code == ADBCommandResult.RESULT_OK and output:
+            return _parse_dump_permissions("runtime permissions:", output)
+        return dict()
+
+    def get_requested_permissions(self, package: str):
+        """
+        Returns the package runtime permissions
+        :param package:
+        :return:
+        """
+        log().verbose(f"Fetching requested permissions for `{package}`...")
+        code, output, error = self.dump_package(package)
+        if code == ADBCommandResult.RESULT_OK and output:
+            return list(_parse_dump_permissions("requested permissions:", output).keys())
+        return list()
+
+    def get_install_permissions(self, package: str):
+        """
+        Returns the package runtime permissions
+        :param package:
+        :return:
+        """
+        log().verbose(f"Fetching install permissions for `{package}`...")
+        code, output, error = self.dump_package(package)
+        if code == ADBCommandResult.RESULT_OK and output:
+            return _parse_dump_permissions("install permissions:", output)
+        return dict()
 
     """ ----------------------------------------------------------------------- """
     """ Private Methods """

@@ -388,7 +388,7 @@ def capture_output(command: str, ip: Optional[str] = None, **kwargs) -> ADBComma
         log().spam(f"Executing `{command_log}`")
         out = subprocess.Popen(
             command_full.split(),
-            stderr=subprocess.STDOUT,
+            stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             shell=False,
         )

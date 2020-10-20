@@ -1,3 +1,11 @@
-# DEVICE_IP = "192.168.1.114:5555"
-DEVICE_IP = "emulator-5554"
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+
+DEVICE_IP = "192.168.1.131:5555"
+# DEVICE_IP = "emulator-5554"
+
+DEBUG_APK = os.path.join(os.path.dirname(__file__), "assets/app-debug.apk")
+DEBUG_APK_PACKAGE = "it.sephiroth.android.library.uigestures.demo"
 

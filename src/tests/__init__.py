@@ -19,10 +19,9 @@ def get_logger(name: str) -> verboselogs.VerboseLogger:
     # handler.setFormatter(formatter)
     # logger.addFilter(_fmt_filter)
     coloredlogs.install(level=logging.SPAM,
-                        fmt='%(asctime)s:%(msecs)03d %(levelname)-10s %(name)-12s %(lineno)-4d %(processName)-12s   %(message)s',
+                        fmt='%(asctime)s:%(msecs)03d %(levelname)-10s %(name)-18s %(lineno)-4d %(processName)-12s   %(message)s',
                         datefmt='%H:%M:%S')
     return logger
-
 
 logging.basicConfig(level=verboselogs.SPAM)
 
