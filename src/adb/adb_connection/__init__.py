@@ -274,6 +274,12 @@ class ADBCommandResult(object):
     def __str__(self):
         return f"Result(code={self._code}, output={self._stdout}, error={self._stderr})"
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
     @property
     def code(self):
         """

@@ -4,7 +4,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Union, List
 
 from . import adb_connection
 from .adb_connection import ADBCommandResult
@@ -186,15 +186,18 @@ class ADBClient(object):
             return output
         return None
 
-    def get_properties(self) -> Dict[str, str]:
-        code, output, error = self.shell("getprop")
-        result = dict()
-        if code == ADBCommandResult.RESULT_OK and output:
-            lines = list(map(lambda x: x.split(':', 1), output.splitlines()))
-            for line in lines:
-                item = list(map(lambda y: y.strip()[1:-1], line))
-                result[item[0]] = item[1]
-        return result
+    def getprop(self, key: Optional[str] = None) -> Union[str, Dict[str, str]]:
+        if key:
+            with self.shell(f"getprop {key}") as result:
+                if result.is_ok():
+                    return result.output()
+        else:
+            with self.shell("getprop") as result:
+                if result.is_ok() and result.output():
+                    return self._parse_properties(result.output())
+
+    def setprop(self, key: str, value: str):
+        return self.shell(f"setprop {key} {value}")
 
     def get_mac_address(self) -> Optional[str]:
         result = self.ifconfig()
@@ -249,7 +252,7 @@ class ADBClient(object):
         return self.shell(f"pm dump {package}")
 
     def is_package_installed(self, package: str) -> bool:
-        return Package({'package': package}) in self.list_packages(package)
+        return any(x.name == package for x in self.list_packages(package))
 
     def list_packages(self, package: Optional[str] = None, **kwargs):
         """
@@ -337,12 +340,15 @@ class ADBClient(object):
         return adb_connection.pull(ip=self._identifier, src=src, dst=str(final_dst), **kwargs)
 
     def get_package(self, package: str) -> Optional[Package]:
-        # noinspection RegExpRedundantEscape
         result = self.list_packages(package, args=("-f", "-U", "-i"))
-        for line in result:
-            if line.name == package:
-                return line
-        return None
+        log().spam(f"result: {result}")
+        return next((x for x in result if x.name == package), None)
+
+    def is_system_package(self, package: str):
+        result = self.get_package(package)
+        if result is not None:
+            return result.is_system()
+        return False
 
     def install_package(self, apk: Path, **kwargs):
         """
@@ -400,6 +406,9 @@ class ADBClient(object):
         return self.shell("pm clear",
                           **adb_connection.extends_extra_arguments(str(package), **kwargs))
 
+    def reload_package(self, package: str):
+        return self.shell(f"am force-stop {package}")
+
     """ -----------------------------------------------------------------------"""
     """ Key Events """
     """ -----------------------------------------------------------------------"""
@@ -441,12 +450,12 @@ class ADBClient(object):
         """
         )
 
-    def send_key(self, key: int):
+    def send_key(self, key: int) -> ADBCommandResult:
         assert type(key) is int
         log().verbose(f"Sending key: {key}")
         return self.shell(f"input keyevent {key}")
 
-    def send_text(self, char: str):
+    def send_text(self, char: str) -> ADBCommandResult:
         assert type(char) is str
         log().verbose(f"Sending {char}...")
         return self.shell(f"input text {char}")
@@ -454,6 +463,10 @@ class ADBClient(object):
     """ -----------------------------------------------------------------------"""
     """ Permissions """
     """ -----------------------------------------------------------------------"""
+
+    def has_runtime_permission(self, package: str, permission: str) -> bool:
+        """Test if the given package has the runtime permission granted"""
+        return any(x[0] == permission and x[1] for x in self.get_runtime_permissions(package).items())
 
     def grant_runtime_permission(self, package: str, permission: str):
         log().verbose(f"Granting '{permission}' to '{package}'...")
@@ -463,7 +476,7 @@ class ADBClient(object):
         log().verbose(f"Revoking '{permission}' from '{package}'...")
         return self.shell(f"pm revoke {package} {permission}")
 
-    def get_runtime_permissions(self, package: str):
+    def get_runtime_permissions(self, package: str) -> Dict[str, bool]:
         """
         Returns the package runtime permissions
         :param package:
@@ -475,7 +488,7 @@ class ADBClient(object):
             return _parse_dump_permissions("runtime permissions:", output)
         return dict()
 
-    def get_requested_permissions(self, package: str):
+    def get_requested_permissions(self, package: str) -> List[str]:
         """
         Returns the package runtime permissions
         :param package:
@@ -487,7 +500,7 @@ class ADBClient(object):
             return list(_parse_dump_permissions("requested permissions:", output).keys())
         return list()
 
-    def get_install_permissions(self, package: str):
+    def get_install_permissions(self, package: str) -> Dict[str, bool]:
         """
         Returns the package runtime permissions
         :param package:
@@ -512,3 +525,11 @@ class ADBClient(object):
     def _connect_if_disconnected(self):
         if not self.is_connected():
             self.connect()
+
+    def _parse_properties(self, string: str) -> Dict[str, str]:
+        result = dict()
+        lines = list(map(lambda x: x.split(':', 1), string.splitlines()))
+        for line in lines:
+            item = list(map(lambda y: y.strip()[1:-1], line))
+            result[item[0]] = item[1]
+        return result
