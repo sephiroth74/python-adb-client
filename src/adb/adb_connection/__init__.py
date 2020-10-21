@@ -176,31 +176,36 @@ import zope.event
 from adb import events
 
 __all__ = [
-    "Device",
     "ADBCommandResult",
-    "get_adb_path",
-    "set_adb_path",
-    "which",
-    "execute",
-    "capture_output",
-    "shell",
-    "wait_for_device",
-    "root",
-    "unroot",
-    "is_root",
-    "devices",
-    "is_connected",
-    "connect",
-    "disconnect_all",
-    "disconnect",
-    "reboot",
-    "remount_as",
-    "remount",
-    "busybox",
+    "Device",
     "bugreport",
+    "busybox",
+    "capture_output",
+    "connect",
+    "devices",
+    "disconnect",
+    "disconnect_all",
+    "execute",
+    "get_adb_path",
+    "is_connected",
+    "is_root",
     "mdns_check",
-    "version",
     "mdns_services",
+    "pull",
+    "push",
+    "reboot",
+    "reconnect",
+    "reconnect_device",
+    "reconnect_offline",
+    "remount",
+    "remount_as",
+    "root",
+    "set_adb_path",
+    "shell",
+    "unroot",
+    "version",
+    "wait_for_device",
+    "which",
 ]
 
 adb_path = None
@@ -288,9 +293,9 @@ class ADBCommandResult(object):
     RESULT_ERROR = 1
 
     def __init__(
-        self,
-        result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
-        code: int = RESULT_OK,
+            self,
+            result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
+            code: int = RESULT_OK,
     ):
         super(ADBCommandResult, self).__init__()
         self._stdout = result[0] if result[0] else None
@@ -409,7 +414,7 @@ def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
 
 
 def capture_output(
-    command: str, ip: Optional[str] = None, **kwargs
+        command: str, ip: Optional[str] = None, **kwargs
 ) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
@@ -678,7 +683,7 @@ def remount(ip: Optional[str] = None) -> bool:
 
 
 def remount_as(
-    ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
+        ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
 ) -> bool:
     """
     Mount/Remount file-system
@@ -692,13 +697,13 @@ def remount_as(
             return False
     if writeable:
         return (
-            shell(f"mount -o rw,remount {folder}", ip=ip).code
-            == ADBCommandResult.RESULT_OK
+                shell(f"mount -o rw,remount {folder}", ip=ip).code
+                == ADBCommandResult.RESULT_OK
         )
     else:
         return (
-            shell(f"mount -o ro,remount {folder}", ip=ip).code
-            == ADBCommandResult.RESULT_OK
+                shell(f"mount -o ro,remount {folder}", ip=ip).code
+                == ADBCommandResult.RESULT_OK
         )
 
 
