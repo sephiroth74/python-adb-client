@@ -11,13 +11,10 @@ from .test_const import DEVICE_IP
 
 log = get_logger("==> test_adb_connection")
 
-SKIP_TESTS = True
-SKIP_REASON = "skip"
-
-
 # coverage run -m unittest discover
 # coverage report -m
 # coverage html
+
 
 def handle_event(event):
     log.verbose(f"Received Event: {event}")
@@ -32,13 +29,12 @@ zope.event.subscribers.append(handle_event)
 
 
 class ADBConnectionTestCase(unittest.TestCase):
-
     def setUp(self) -> None:
-        print('setUp')
+        print("setUp")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
 
     def tearDown(self) -> None:
-        print('tearDown')
+        print("tearDown")
         adb_connection.disconnect(ip=DEVICE_IP)
 
     def test_001(self):
@@ -92,7 +88,8 @@ class ADBConnectionTestCase(unittest.TestCase):
         # adb root
         adb_connection.root(ip=DEVICE_IP)
         adb_connection.reconnect_device(ip=DEVICE_IP)
-        if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
+        if not adb_connection.is_connected(DEVICE_IP):
+            adb_connection.wait_for_device(DEVICE_IP)
         sleep(2)
 
         # check is root
@@ -121,7 +118,8 @@ class ADBConnectionTestCase(unittest.TestCase):
         if not adb_connection.is_root(ip=DEVICE_IP):
             self.assertTrue(adb_connection.root(ip=DEVICE_IP))
             adb_connection.reconnect_device(ip=DEVICE_IP)
-            if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
+            if not adb_connection.is_connected(DEVICE_IP):
+                adb_connection.wait_for_device(DEVICE_IP)
 
         self.assertTrue(adb_connection.remount_as(ip=DEVICE_IP, writeable=True))
         sleep(2)
@@ -131,7 +129,8 @@ class ADBConnectionTestCase(unittest.TestCase):
 
         adb_connection.unroot(ip=DEVICE_IP)
         adb_connection.reconnect_device(ip=DEVICE_IP)
-        if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
+        if not adb_connection.is_connected(DEVICE_IP):
+            adb_connection.wait_for_device(DEVICE_IP)
         sleep(2)
 
         self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
@@ -157,13 +156,16 @@ class ADBConnectionTestCase(unittest.TestCase):
         if adb_connection.is_root(ip=DEVICE_IP):
             if adb_connection.unroot(ip=DEVICE_IP):
                 adb_connection.reconnect_device(DEVICE_IP)
-                if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
+                if not adb_connection.is_connected(DEVICE_IP):
+                    adb_connection.wait_for_device(DEVICE_IP)
 
         self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
         self.assertFalse(adb_connection.is_root(ip=DEVICE_IP))
 
         if adb_connection.which("busybox", ip=DEVICE_IP):
-            result: adb_connection.ADBCommandResult = adb_connection.busybox("whoami", ip=DEVICE_IP)
+            result: adb_connection.ADBCommandResult = adb_connection.busybox(
+                "whoami", ip=DEVICE_IP
+            )
             self.assertEqual(adb_connection.ADBCommandResult.RESULT_OK, result.code)
             self.assertEqual("shell", result.output())
 
@@ -201,5 +203,5 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
