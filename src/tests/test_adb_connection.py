@@ -41,7 +41,6 @@ class ADBConnectionTestCase(unittest.TestCase):
         print('tearDown')
         adb_connection.disconnect(ip=DEVICE_IP)
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_001(self):
         print("test_001")
         adb_path = adb_connection.get_adb_path()
@@ -49,7 +48,6 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(len(adb_path) > 0)
         self.assertTrue(os.path.exists(adb_path))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_002(self):
         print("test_002")
         devices = adb_connection.devices(args=("-l",))
@@ -65,8 +63,7 @@ class ADBConnectionTestCase(unittest.TestCase):
             log.debug(f"attached device: {device}")
 
     def test_003(self):
-        print()
-        log.debug("test_003")
+        print("test_003")
         if adb_connection.is_connected(ip=DEVICE_IP):
             self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
@@ -78,25 +75,15 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(len(devices) > 0)
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
-    def test_004(self):
-        log.debug("test_004")
-        self.assertTrue(adb_connection.connect(DEVICE_IP))
-        self.assertTrue(adb_connection.reboot(ip=DEVICE_IP))
-        sleep(5)
-        self.assertTrue(adb_connection.wait_for_device(ip=DEVICE_IP))
-        self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
-
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_005(self):
-        print()
-        log.debug("test_005")
+        print("test_005")
         # connect
         self.assertTrue(adb_connection.connect(DEVICE_IP))
 
         # should not be root
         if adb_connection.is_root(ip=DEVICE_IP):
             adb_connection.unroot(DEVICE_IP)
+            adb_connection.reconnect_device(ip=DEVICE_IP)
             sleep(2)
 
         # check is not root
@@ -104,6 +91,8 @@ class ADBConnectionTestCase(unittest.TestCase):
 
         # adb root
         adb_connection.root(ip=DEVICE_IP)
+        adb_connection.reconnect_device(ip=DEVICE_IP)
+        if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
         sleep(2)
 
         # check is root
@@ -118,20 +107,21 @@ class ADBConnectionTestCase(unittest.TestCase):
 
         # unroot
         adb_connection.unroot(ip=DEVICE_IP)
+        adb_connection.reconnect_device(ip=DEVICE_IP)
         sleep(2)
 
         # check is not root
         self.assertFalse(adb_connection.is_root(ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_006(self):
-        print()
-        log.debug("test_006")
+        print("test_006")
         self.assertTrue(adb_connection.connect(DEVICE_IP))
 
         if not adb_connection.is_root(ip=DEVICE_IP):
             self.assertTrue(adb_connection.root(ip=DEVICE_IP))
+            adb_connection.reconnect_device(ip=DEVICE_IP)
+            if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
 
         self.assertTrue(adb_connection.remount_as(ip=DEVICE_IP, writeable=True))
         sleep(2)
@@ -140,44 +130,34 @@ class ADBConnectionTestCase(unittest.TestCase):
         sleep(2)
 
         adb_connection.unroot(ip=DEVICE_IP)
+        adb_connection.reconnect_device(ip=DEVICE_IP)
+        if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
         sleep(2)
 
         self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
         self.assertFalse(adb_connection.is_root(ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
-    def test_007(self):
-        print()
-        log.debug("test_007")
-        self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
-        self.assertTrue(adb_connection.wait_for_device(ip=DEVICE_IP))
-
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_008(self):
-        print()
-        log.debug("test_008")
+        print("test_008")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect_all())
         self.assertFalse(adb_connection.is_connected(ip=DEVICE_IP))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_009(self):
-        print()
-        log.debug("test_009")
+        print("test_009")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
         self.assertEqual("/system/bin/cat", adb_connection.which("cat", ip=DEVICE_IP))
         self.assertTrue(adb_connection.disconnect(ip=DEVICE_IP))
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_010(self):
-        print()
-        log.debug("test_010")
+        print("test_010")
         self.assertTrue(adb_connection.connect(ip=DEVICE_IP))
 
         if adb_connection.is_root(ip=DEVICE_IP):
             if adb_connection.unroot(ip=DEVICE_IP):
-                adb_connection.wait_for_device(ip=DEVICE_IP)
+                adb_connection.reconnect_device(DEVICE_IP)
+                if not adb_connection.is_connected(DEVICE_IP): adb_connection.wait_for_device(DEVICE_IP)
 
         self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
         self.assertFalse(adb_connection.is_root(ip=DEVICE_IP))
@@ -185,18 +165,15 @@ class ADBConnectionTestCase(unittest.TestCase):
         if adb_connection.which("busybox", ip=DEVICE_IP):
             result: adb_connection.ADBCommandResult = adb_connection.busybox("whoami", ip=DEVICE_IP)
             self.assertEqual(adb_connection.ADBCommandResult.RESULT_OK, result.code)
-            self.assertEqual("shell", result.result)
+            self.assertEqual("shell", result.output())
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_011(self):
-        print()
-        log.debug("test_011")
+        print("test_011")
         version = adb_connection.version()
         self.assertIsNotNone(version)
         for line in version.splitlines():
             log.debug(line)
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_012(self):
         print("test_012")
         mdns_check = adb_connection.mdns_check()
@@ -204,9 +181,8 @@ class ADBConnectionTestCase(unittest.TestCase):
         if mdns_check.code == 0:
             mdns_services = adb_connection.mdns_services()
             log.debug(f"mdns_services: {mdns_services}")
-            self.assertIsNotNone(mdns_services.result)
+            self.assertIsNotNone(mdns_services.output())
 
-    @unittest.skipIf(SKIP_TESTS, SKIP_REASON)
     def test_013(self):
         print("test_013")
         dest_file = Path(os.path.dirname(__file__)) / "bugreport.zip"
@@ -215,6 +191,14 @@ class ADBConnectionTestCase(unittest.TestCase):
         self.assertTrue(adb_connection.bugreport(str(dest_file), ip=DEVICE_IP))
         self.assertTrue(dest_file.exists())
         dest_file.unlink(True)
+
+    def test_014(self):
+        print("test_004")
+        self.assertTrue(adb_connection.connect(DEVICE_IP))
+        self.assertTrue(adb_connection.reboot(ip=DEVICE_IP))
+        sleep(5)
+        self.assertTrue(adb_connection.wait_for_device(ip=DEVICE_IP))
+        self.assertTrue(adb_connection.is_connected(ip=DEVICE_IP))
 
 
 if __name__ == '__main__':
