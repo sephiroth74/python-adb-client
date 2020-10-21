@@ -3,11 +3,11 @@
 
 import os
 import unittest
+
 from pathlib import Path
 
-from adb import KeyCodes
-from adb import ADBClient
-from adb.adb_connection import disconnect_all, ADBCommandResult
+from adb import ADBClient, KeyCodes
+from adb.adb_connection import ADBCommandResult
 from . import get_logger
 from .test_const import DEVICE_IP, DEBUG_APK, DEBUG_APK_PACKAGE
 
@@ -20,7 +20,7 @@ class MyTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        disconnect_all()
+        ADBClient.disconnect_all()
 
     def setUp(self) -> None:
         self.client = ADBClient(DEVICE_IP)
@@ -32,29 +32,37 @@ class MyTestCase(unittest.TestCase):
 
     def test_000(self):
         print("test_000")
-        self.client.root()
-        self.assertTrue(self.client.is_root())
-        self.client.unroot()
-        self.assertFalse(self.client.is_root())
+        # self.client.root()
+        # self.assertTrue(self.client.is_root())
+        # self.client.unroot()
+        # self.assertFalse(self.client.is_root())
+        self.assertTrue(self.client.is_package_installed("com.swisscom.swisscomTv"))
 
     def test_001(self):
         print("test_001")
-        code, stdout, stderr = self.client.list_packages()
-        self.assertEqual(ADBCommandResult.RESULT_OK, code)
-        self.assertIsNotNone(stdout)
-        self.assertIsNone(stderr)
+        packages = self.client.list_packages()
+        self.assertTrue(len(packages) > 0)
+        self.assertIsNotNone(packages[0].name)
 
-        code, stdout, stderr = self.client.list_packages(package="com.android.bluetooth")
-        self.assertTrue(len(stdout) > 0)
-        self.assertTrue("com.android.bluetooth" in stdout)
+        packages = self.client.list_packages(args=("-f",))
+        self.assertIsNotNone(packages[0].apk)
+        self.assertIsNone(packages[0].uuid)
+        self.assertIsNone(packages[0].installer)
+
+        packages = self.client.list_packages(args=("-U",))
+        self.assertIsNotNone(packages[0].uuid)
+        self.assertIsNone(packages[0].apk)
+        self.assertIsNone(packages[0].installer)
+
+        packages = self.client.list_packages("com.android.bluetooth")
+        self.assertTrue(len(packages) == 1)
+        self.assertEqual("com.android.bluetooth", packages[0].name)
+
+        packages = self.client.list_packages("com.android.bla.bla")
+        self.assertTrue(len(packages) == 0)
 
     def test_002(self):
         print("test_002")
-        packages = self.client.packages("com.android.bluetooth")
-        self.assertEqual(list, type(packages))
-        self.assertTrue(len(packages) > 0)
-        self.assertTrue(self.client.is_package_installed("com.android.bluetooth"))
-        self.assertFalse(self.client.is_package_installed("com.test.1.bluetooth"))
 
     def test_003(self):
         print("test_003")
@@ -92,10 +100,10 @@ class MyTestCase(unittest.TestCase):
         # self.assertIsNotNone(address)
         # self.assertTrue(len(address) > 0)
 
-        id = self.client.get_id()
-        log.debug(f"id: {id}")
-        self.assertIsNotNone(id)
-        self.assertTrue(len(id) > 0)
+        client_id = self.client.get_id()
+        log.debug(f"id: {client_id}")
+        self.assertIsNotNone(client_id)
+        self.assertTrue(len(client_id) > 0)
 
     def test_006(self):
         print("test_006")
@@ -119,7 +127,6 @@ class MyTestCase(unittest.TestCase):
         print("test_008")
         result = self.client.dumpsys_bluetooth()
         if result.is_ok() and result.output() is not None:
-            log.debug(f"result: {result}")
             self.assertIsNotNone(result.output())
         else:
             self.assertIsNotNone(result.error())
@@ -197,7 +204,6 @@ class MyTestCase(unittest.TestCase):
 
     def test_014(self):
         print("test_014")
-
         self.assertTrue(self.client.push(__file__, f"/sdcard/{THIS_FILE_NAME}"))
 
         dest_file = Path(os.path.expanduser("~")) / "Desktop" / THIS_FILE_NAME
@@ -207,22 +213,25 @@ class MyTestCase(unittest.TestCase):
         # test dry run
         self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-n",))
         self.assertFalse(dest_file.exists())
-        self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-z", "brotli",))
 
+        self.client.pull(f"/sdcard/{THIS_FILE_NAME}", Path(os.path.expanduser("~")) / "Desktop", args=("-z", "brotli",))
         self.assertTrue(dest_file.exists())
         dest_file.unlink()
 
     def test_015(self):
         print("test_015")
         result = self.client.get_runtime_permissions("com.android.bluetooth")
+        log.spam(f"permissions: {result.keys()}")
         self.assertTrue(len(result) > 0)
 
     def test_016(self):
         print("test_016")
-        result = self.client.get_package_apk("com.android.bluetooth")
-        log.debug(f"apk location: {result}")
+        result = self.client.get_package("com.android.bluetooth")
+        log.debug(f"package: {result}")
         self.assertIsNotNone(result)
-        self.assertTrue(result.endswith(".apk"))
+        self.assertTrue(result.is_system())
+        self.assertEqual("com.android.bluetooth", result.name)
+        self.assertIsNotNone(result.uuid)
 
     def test_017(self):
         apk_file = Path(DEBUG_APK)

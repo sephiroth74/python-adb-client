@@ -4,18 +4,57 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict
 
 from . import adb_connection
 from .adb_connection import ADBCommandResult
 
-__all__ = ['ADBClient']
+__all__ = ['ADBClient', 'Package']
 
 
 def log():
     from . import _logger
     logger = _logger.get_logger(__name__)
     return logger
+
+
+# noinspection RegExpRedundantEscape
+package_pattern = re.compile(
+    r"package:(?P<apk>.*\.apk)?=?(?P<package>[a-zA-Z0-9\.]+)\s*(installer=(?P<installer>[\w\.]+))?\s*(uid:(?P<uuid>[\w]+))?")
+
+
+class Package(object):
+    # noinspection PyShadowingBuiltins
+    def __init__(self, input: Dict[str, str]):
+        self._name = input['package']
+        self._apk = input.get('apk', None)
+        self._installer = input.get('installer', None)
+        self._uuid = input.get('uuid', None)
+
+    @property
+    def name(self): return self._name
+
+    @property
+    def apk(self): return self._apk
+
+    @property
+    def installer(self): return self._installer
+
+    @property
+    def uuid(self): return self._uuid
+
+    def is_system(self): return self._apk.startswith("/system/") if self._apk else False
+
+    def __repr__(self):
+        return f'Package<id: {id(self)}, name: {self.name}>'
+
+    def __str__(self):
+        return f'Package({self.name})'
+
+    def __eq__(self, other):
+        if isinstance(other, (Package,)):
+            return self.name == other.name
+        return False
 
 
 def _parse_dump_permissions(headline: str, input_str: str) -> Dict[str, bool]:
@@ -69,6 +108,10 @@ class ADBClient(object):
 
     def disconnect(self):
         return adb_connection.disconnect(ip=self._identifier)
+
+    @staticmethod
+    def disconnect_all():
+        return adb_connection.disconnect_all()
 
     def is_connected(self):
         return adb_connection.is_connected(ip=self._identifier)
@@ -205,14 +248,8 @@ class ADBClient(object):
             return ADBCommandResult.from_error(ADBCommandResult.RESULT_ERROR)
         return self.shell(f"pm dump {package}")
 
-    def packages(self, package: Optional[str] = None):
-        code, result, _ = self.list_packages(package)
-        if code == ADBCommandResult.RESULT_OK and result:
-            return list(map(lambda x: x.replace("package:", "").strip(), result.splitlines()))
-        return []
-
     def is_package_installed(self, package: str) -> bool:
-        return package in self.packages(package)
+        return Package({'package': package}) in self.list_packages(package)
 
     def list_packages(self, package: Optional[str] = None, **kwargs):
         """
@@ -236,8 +273,16 @@ class ADBClient(object):
         :param kwargs:
         :return:
         """
-        return self.shell(f"cmd package list packages",
-                          **adb_connection.extends_extra_arguments(f"{package if package else ''}", **kwargs))
+        result = self.shell(f"cmd package list packages",
+                            **adb_connection.extends_extra_arguments(f"{package if package else ''}", **kwargs))
+        packages = list()
+        if result.is_ok() and result.output():
+            for line in result.output().splitlines():
+                match = re.match(package_pattern, line)
+                if match:
+                    packages.append(Package(match.groupdict()))
+
+        return packages
 
     """ -----------------------------------------------------------------------"""
     """ File system methods """
@@ -291,16 +336,12 @@ class ADBClient(object):
             final_dst = dst / os.path.basename(src)
         return adb_connection.pull(ip=self._identifier, src=src, dst=str(final_dst), **kwargs)
 
-    def get_package_apk(self, package: str) -> Optional[str]:
+    def get_package(self, package: str) -> Optional[Package]:
         # noinspection RegExpRedundantEscape
-        pattern = re.compile("package:(.*\\.apk)?=?([\\w\\.]+)( installer=[\\w\\.]+)?( uid:[\\w]+)?")
-        result = self.list_packages(package, args=("-f",))
-        if result.is_ok():
-            for line in result.output().splitlines():
-                match = re.match(pattern, line)
-                if match:
-                    if match.group(2) == package:
-                        return match.group(1)
+        result = self.list_packages(package, args=("-f", "-U", "-i"))
+        for line in result:
+            if line.name == package:
+                return line
         return None
 
     def install_package(self, apk: Path, **kwargs):
@@ -336,7 +377,7 @@ class ADBClient(object):
             --version-check-agent: update deployment agent when local version has different version code and using fast deploy
             --local-agent: locate agent files from local source build (instead of SDK location)
             (See also `adb shell pm help` for more options.)
-        :param apk:
+        :param apks:
         :param kwargs:
         :return:
         """
