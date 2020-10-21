@@ -15,10 +15,12 @@ class ADBEvent(object):
         self._event_data = event_data
 
     @property
-    def event_type(self): return self._event_type
+    def event_type(self):
+        return self._event_type
 
     @property
-    def event_data(self): return self._event_data
+    def event_data(self):
+        return self._event_data
 
     def __str__(self):
         return f"ADBEvent(type={self._event_type}, data={self._event_data})"

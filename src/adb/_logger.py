@@ -9,12 +9,12 @@ import verboselogs
 
 # import coloredlogs
 
-__all__ = ['get_logger', 'logging']
+__all__ = ["get_logger", "logging"]
 
 
 def _fmt_filter(record):
-    record.levelname = '[%s]' % record.levelname
-    record.funcName = '[%s]' % record.funcName
+    record.levelname = "[%s]" % record.levelname
+    record.funcName = "[%s]" % record.funcName
     return True
 
 

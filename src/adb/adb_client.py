@@ -9,47 +9,54 @@ from typing import Optional, Dict, Union, List
 from . import adb_connection
 from .adb_connection import ADBCommandResult
 
-__all__ = ['ADBClient', 'Package']
+__all__ = ["ADBClient", "Package"]
 
 
 def log():
     from . import _logger
+
     logger = _logger.get_logger(__name__)
     return logger
 
 
 # noinspection RegExpRedundantEscape
 package_pattern = re.compile(
-    r"package:(?P<apk>.*\.apk)?=?(?P<package>[a-zA-Z0-9\.]+)\s*(installer=(?P<installer>[\w\.]+))?\s*(uid:(?P<uuid>[\w]+))?")
+    r"package:(?P<apk>.*\.apk)?=?(?P<package>[a-zA-Z0-9\.]+)\s*(installer=(?P<installer>[\w\.]+))?\s*(uid:(?P<uuid>[\w]+))?"
+)
 
 
 class Package(object):
     # noinspection PyShadowingBuiltins
     def __init__(self, input: Dict[str, str]):
-        self._name = input['package']
-        self._apk = input.get('apk', None)
-        self._installer = input.get('installer', None)
-        self._uuid = input.get('uuid', None)
+        self._name = input["package"]
+        self._apk = input.get("apk", None)
+        self._installer = input.get("installer", None)
+        self._uuid = input.get("uuid", None)
 
     @property
-    def name(self): return self._name
+    def name(self):
+        return self._name
 
     @property
-    def apk(self): return self._apk
+    def apk(self):
+        return self._apk
 
     @property
-    def installer(self): return self._installer
+    def installer(self):
+        return self._installer
 
     @property
-    def uuid(self): return self._uuid
+    def uuid(self):
+        return self._uuid
 
-    def is_system(self): return self._apk.startswith("/system/") if self._apk else False
+    def is_system(self):
+        return self._apk.startswith("/system/") if self._apk else False
 
     def __repr__(self):
-        return f'Package<id: {id(self)}, name: {self.name}>'
+        return f"Package<id: {id(self)}, name: {self.name}>"
 
     def __str__(self):
-        return f'Package({self.name})'
+        return f"Package({self.name})"
 
     def __eq__(self, other):
         if isinstance(other, (Package,)):
@@ -152,7 +159,9 @@ class ADBClient(object):
 
     def capture_output(self, command: str, **kwargs):
         self._connect_if_disconnected()
-        return adb_connection.capture_output(command=command, ip=self._identifier, **kwargs)
+        return adb_connection.capture_output(
+            command=command, ip=self._identifier, **kwargs
+        )
 
     def execute(self, command: str, **kwargs):
         self._connect_if_disconnected()
@@ -235,8 +244,9 @@ class ADBClient(object):
         :param kwargs:  additional arguments
         :return:
         """
-        return self.shell(command=f"dumpsys",
-                          **adb_connection.extends_extra_arguments(which, **kwargs))
+        return self.shell(
+            command="dumpsys", **adb_connection.extends_extra_arguments(which, **kwargs)
+        )
 
     def dumpsys_meminfo(self, package: str):
         if not self.is_package_installed(package):
@@ -276,8 +286,12 @@ class ADBClient(object):
         :param kwargs:
         :return:
         """
-        result = self.shell(f"cmd package list packages",
-                            **adb_connection.extends_extra_arguments(f"{package if package else ''}", **kwargs))
+        result = self.shell(
+            "cmd package list packages",
+            **adb_connection.extends_extra_arguments(
+                f"{package if package else ''}", **kwargs
+            ),
+        )
         packages = list()
         if result.is_ok() and result.output():
             for line in result.output().splitlines():
@@ -337,7 +351,9 @@ class ADBClient(object):
             if not dst.exists():
                 raise IOError(f"{dst} does not exist")
             final_dst = dst / os.path.basename(src)
-        return adb_connection.pull(ip=self._identifier, src=src, dst=str(final_dst), **kwargs)
+        return adb_connection.pull(
+            ip=self._identifier, src=src, dst=str(final_dst), **kwargs
+        )
 
     def get_package(self, package: str) -> Optional[Package]:
         result = self.list_packages(package, args=("-f", "-U", "-i"))
@@ -358,8 +374,10 @@ class ADBClient(object):
         :return:
         """
         log().info(f"Installing {apk}...")
-        return self.capture_output(command="install",
-                                   **adb_connection.extends_extra_arguments(str(apk), **kwargs))
+        return self.capture_output(
+            command="install",
+            **adb_connection.extends_extra_arguments(str(apk), **kwargs),
+        )
 
     def install_multi_package(self, *apks, **kwargs):
         """
@@ -387,8 +405,12 @@ class ADBClient(object):
         :param kwargs:
         :return:
         """
-        return self.capture_output(command="install-multi-package",
-                                   **adb_connection.extends_extra_arguments(*list(map(lambda x: str(x), apks)), **kwargs))
+        return self.capture_output(
+            command="install-multi-package",
+            **adb_connection.extends_extra_arguments(
+                *list(map(lambda x: str(x), apks)), **kwargs
+            ),
+        )
 
     def uninstall_package(self, package: str, **kwargs):
         """
@@ -397,14 +419,17 @@ class ADBClient(object):
             '-k': keep the data and cache directories
         """
         log().info(f"Uninstalling {package}...")
-        return self.shell("pm uninstall",
-                          **adb_connection.extends_extra_arguments(str(package), **kwargs))
+        return self.shell(
+            "pm uninstall",
+            **adb_connection.extends_extra_arguments(str(package), **kwargs),
+        )
 
     def clear_package(self, package: str, **kwargs):
         log().info(f"Clearing {package}")
 
-        return self.shell("pm clear",
-                          **adb_connection.extends_extra_arguments(str(package), **kwargs))
+        return self.shell(
+            "pm clear", **adb_connection.extends_extra_arguments(str(package), **kwargs)
+        )
 
     def reload_package(self, package: str):
         return self.shell(f"am force-stop {package}")
@@ -446,8 +471,7 @@ class ADBClient(object):
         sendevent /dev/input/event3 0000 0000 00000000 &&
         sendevent /dev/input/event3 0004 0004 000c0042 &&
         sendevent /dev/input/event3 0001 {key} 00000000 &&
-        sendevent /dev/input/event3 0000 0000 00000000        
-        """
+        sendevent /dev/input/event3 0000 0000 00000000"""
         )
 
     def send_key(self, key: int) -> ADBCommandResult:
@@ -466,7 +490,10 @@ class ADBClient(object):
 
     def has_runtime_permission(self, package: str, permission: str) -> bool:
         """Test if the given package has the runtime permission granted"""
-        return any(x[0] == permission and x[1] for x in self.get_runtime_permissions(package).items())
+        return any(
+            x[0] == permission and x[1]
+            for x in self.get_runtime_permissions(package).items()
+        )
 
     def grant_runtime_permission(self, package: str, permission: str):
         log().verbose(f"Granting '{permission}' to '{package}'...")
@@ -497,7 +524,9 @@ class ADBClient(object):
         log().verbose(f"Fetching requested permissions for `{package}`...")
         code, output, error = self.dump_package(package)
         if code == ADBCommandResult.RESULT_OK and output:
-            return list(_parse_dump_permissions("requested permissions:", output).keys())
+            return list(
+                _parse_dump_permissions("requested permissions:", output).keys()
+            )
         return list()
 
     def get_install_permissions(self, package: str) -> Dict[str, bool]:
@@ -528,7 +557,7 @@ class ADBClient(object):
 
     def _parse_properties(self, string: str) -> Dict[str, str]:
         result = dict()
-        lines = list(map(lambda x: x.split(':', 1), string.splitlines()))
+        lines = list(map(lambda x: x.split(":", 1), string.splitlines()))
         for line in lines:
             item = list(map(lambda y: y.strip()[1:-1], line))
             result[item[0]] = item[1]

@@ -175,9 +175,33 @@ import zope.event
 
 from adb import events
 
-__all__ = ['Device', 'ADBCommandResult', 'get_adb_path', 'set_adb_path', 'which', 'execute', 'capture_output', 'shell',
-           'wait_for_device', 'root', 'unroot', 'is_root', 'devices', 'is_connected', 'connect', 'disconnect_all', 'disconnect',
-           'reboot', 'remount_as', 'remount', 'busybox', 'bugreport', 'mdns_check', 'version', 'mdns_services']
+__all__ = [
+    "Device",
+    "ADBCommandResult",
+    "get_adb_path",
+    "set_adb_path",
+    "which",
+    "execute",
+    "capture_output",
+    "shell",
+    "wait_for_device",
+    "root",
+    "unroot",
+    "is_root",
+    "devices",
+    "is_connected",
+    "connect",
+    "disconnect_all",
+    "disconnect",
+    "reboot",
+    "remount_as",
+    "remount",
+    "busybox",
+    "bugreport",
+    "mdns_check",
+    "version",
+    "mdns_services",
+]
 
 adb_path = None
 
@@ -198,21 +222,21 @@ class Device(object):
 
     @property
     def transport_id(self):
-        return self._attrs['transport_id'] if 'transport_id' in self._attrs else None
+        return self._attrs["transport_id"] if "transport_id" in self._attrs else None
 
     def is_usb(self) -> bool:
         """
         Return true if the attached device is connected through USB
         :return:
         """
-        return 'usb' in self._attrs
+        return "usb" in self._attrs
 
     def is_emulator(self) -> bool:
         """
         Return true if the attached device is an emulator
         :return:
         """
-        return self._identifier.startswith('emulator-')
+        return self._identifier.startswith("emulator-")
 
     def is_wifi(self) -> bool:
         """
@@ -241,7 +265,8 @@ class Device(object):
     PATTERN_LINE = re.compile("^([^\\s]+)\\s+device\\s+(.*)$")
     PATTERN_ATTR = re.compile("(\\w+:\\w+)")
     PATTERN_IP = re.compile(
-        "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+$")
+        "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):[0-9]+$"
+    )
 
     @staticmethod
     def parse(string: str) -> Optional[Device]:
@@ -249,7 +274,9 @@ class Device(object):
         if match1:
             device_id = match1.group(1)
             attrbutes = match1.group(2)
-            device_attr = dict(map(lambda x: x.split(':'), re.findall(Device.PATTERN_ATTR, attrbutes)))
+            device_attr = dict(
+                map(lambda x: x.split(":"), re.findall(Device.PATTERN_ATTR, attrbutes))
+            )
             return Device(device_id, device_attr)
         else:
             log().warning(f"Failed to parse device string {string}")
@@ -260,12 +287,14 @@ class ADBCommandResult(object):
     RESULT_OK = 0
     RESULT_ERROR = 1
 
-    def __init__(self,
-                 result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
-                 code: int = RESULT_OK):
+    def __init__(
+        self,
+        result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
+        code: int = RESULT_OK,
+    ):
         super(ADBCommandResult, self).__init__()
         self._stdout = result[0] if result[0] else None
-        self._stderr = result[1].decode('utf-8').strip() if result[1] else None
+        self._stderr = result[1].decode("utf-8").strip() if result[1] else None
         self._code = code
 
     def __iter__(self):
@@ -293,7 +322,8 @@ class ADBCommandResult(object):
             return self._stdout.decode("utf-8").strip()
         return self._stdout
 
-    def error(self): return self._stderr
+    def error(self):
+        return self._stderr
 
     def is_ok(self):
         return self.code == ADBCommandResult.RESULT_OK
@@ -308,6 +338,7 @@ class ADBCommandResult(object):
 
 def log():
     from .. import _logger
+
     logger = _logger.get_logger(__name__)
     return logger
 
@@ -348,9 +379,7 @@ def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     return None
 
 
-def execute(command: str,
-            ip: Optional[str] = None,
-            **kwargs) -> bool:
+def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
     """
     Execute an adb command on the given device, if connected
     :param command: command to execute
@@ -367,7 +396,9 @@ def execute(command: str,
 
     try:
         log().spam(f"Executing `{command_log}`")
-        out = subprocess.Popen(command_full.split(), stderr=subprocess.STDOUT, stdout=output)
+        out = subprocess.Popen(
+            command_full.split(), stderr=subprocess.STDOUT, stdout=output
+        )
         result = out.communicate()
         if not command == "get-state":
             result_str = result[0].decode("utf-8").strip() if result[0] else "None"
@@ -377,7 +408,9 @@ def execute(command: str,
         return False
 
 
-def capture_output(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
+def capture_output(
+    command: str, ip: Optional[str] = None, **kwargs
+) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
     :param command:  command to execute
@@ -455,7 +488,8 @@ def wait_for_device(ip: Optional[str] = None) -> bool:
 
     execute(
         "wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done; input keyevent 143'",
-        ip=ip)
+        ip=ip,
+    )
 
     return is_connected(ip=ip)
 
@@ -643,8 +677,9 @@ def remount(ip: Optional[str] = None) -> bool:
     return execute("remount", ip=ip)
 
 
-def remount_as(ip: Optional[str] = None,
-               writeable: bool = False, folder: str = "/system") -> bool:
+def remount_as(
+    ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
+) -> bool:
     """
     Mount/Remount file-system
     :param folder:          folder to mount
@@ -656,9 +691,15 @@ def remount_as(ip: Optional[str] = None,
         if not root(ip=ip):
             return False
     if writeable:
-        return shell(f"mount -o rw,remount {folder}", ip=ip).code == ADBCommandResult.RESULT_OK
+        return (
+            shell(f"mount -o rw,remount {folder}", ip=ip).code
+            == ADBCommandResult.RESULT_OK
+        )
     else:
-        return shell(f"mount -o ro,remount {folder}", ip=ip).code == ADBCommandResult.RESULT_OK
+        return (
+            shell(f"mount -o ro,remount {folder}", ip=ip).code
+            == ADBCommandResult.RESULT_OK
+        )
 
 
 def version() -> Optional[str]:
@@ -695,15 +736,15 @@ def bugreport(dest: Optional[str] = None, ip: Optional[str] = None) -> bool:
     :param ip:      optional device ip
     :return:        true on success
     """
-    return execute(f"bugreport", ip=ip, args=(dest if dest else '',))
+    return execute("bugreport", ip=ip, args=(dest if dest else "",))
 
 
 def push(ip: Optional[str], src: str, dst: str, **kwargs) -> bool:
-    return execute(command=f"push", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
+    return execute(command="push", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
 
 
 def pull(ip: Optional[str], src: str, dst: str, **kwargs):
-    return execute(command=f"pull", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
+    return execute(command="pull", ip=ip, **extends_extra_arguments(src, dst, **kwargs))
 
 
 """ Utilities """
@@ -711,15 +752,15 @@ def pull(ip: Optional[str], src: str, dst: str, **kwargs):
 
 def get_extra_arguments(**kwargs) -> str:
     _check_extra_arguments_type(**kwargs)
-    if 'args' in kwargs:
-        return ' '.join(filter(lambda x: x is not None, kwargs['args']))
-    return ''
+    if "args" in kwargs:
+        return " ".join(filter(lambda x: x is not None, kwargs["args"]))
+    return ""
 
 
 def expand_extra_arguments(**kwargs) -> List[str]:
     _check_extra_arguments_type(**kwargs)
-    if 'args' in kwargs:
-        return list(filter(lambda x: x is not None, kwargs['args']))
+    if "args" in kwargs:
+        return list(filter(lambda x: x is not None, kwargs["args"]))
     return []
 
 
@@ -727,11 +768,13 @@ def extends_extra_arguments(*args, **kwargs) -> Dict[Any, Any]:
     _check_extra_arguments_type(**kwargs)
     newlist = expand_extra_arguments(**kwargs)
     newlist.extend(args)
-    kwargs['args'] = newlist
+    kwargs["args"] = newlist
     return kwargs
 
 
 def _check_extra_arguments_type(**kwargs):
-    if 'args' in kwargs:
-        if not isinstance(kwargs['args'], (tuple, list)):
-            raise RuntimeError(f'`args` must be either a tuple or a list, got {type(kwargs["args"])} instead')
+    if "args" in kwargs:
+        if not isinstance(kwargs["args"], (tuple, list)):
+            raise RuntimeError(
+                f'`args` must be either a tuple or a list, got {type(kwargs["args"])} instead'
+            )

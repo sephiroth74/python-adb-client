@@ -13,11 +13,12 @@ from . import adb_connection
 from . import propertyparser
 from .adb_connection import ADBCommandResult
 
-__all__ = ['ADBDevice']
+__all__ = ["ADBDevice"]
 
 
 def log():
     from . import _logger
+
     logger = _logger.get_logger(__name__)
     return logger
 
@@ -85,12 +86,14 @@ class ADBDevice(object):
         log().verbose(f"save screencap to {output}")
         return self.client.shell("screencap -p %s" % output)
 
-    def screenrecord(self,
-                     file: str,
-                     bugreport: bool = False,
-                     bitrate: int = 8000000,
-                     timelimit: int = 0,
-                     **kwargs) -> bool:
+    def screenrecord(
+        self,
+        file: str,
+        bugreport: bool = False,
+        bitrate: int = 8000000,
+        timelimit: int = 0,
+        **kwargs,
+    ) -> bool:
         log().verbose(f"screenrecord to {file}")
 
         args = ["--bit-rate", str(bitrate)]
@@ -100,7 +103,9 @@ class ADBDevice(object):
             args.extend(("--time-limit", str(timelimit)))
         args.append(file)
 
-        return self.client.shell("screenrecord", **adb_connection.extends_extra_arguments(*args, **kwargs))
+        return self.client.shell(
+            "screenrecord", **adb_connection.extends_extra_arguments(*args, **kwargs)
+        )
 
     """ -----------------------------------------------------------------------"""
     """ Events """
@@ -159,7 +164,9 @@ class ADBDevice(object):
         if "extras" in kwargs:
             extras.append(kwargs["extras"])
         extras.extend(args)
-        return self.client.shell(f"am broadcast {action} {component} {' '.join(extras)}")
+        return self.client.shell(
+            f"am broadcast {action} {component} {' '.join(extras)}"
+        )
 
     def startservice(self, action: str, component_name: Optional[str], *args, **kwargs):
         action = f"-a {action}"
@@ -168,11 +175,15 @@ class ADBDevice(object):
         if "extras" in kwargs:
             extras.append(kwargs["extras"])
         extras.extend(args)
-        return self.client.shell(f"am startservice {action} {component} {' '.join(extras)}")
+        return self.client.shell(
+            f"am startservice {action} {component} {' '.join(extras)}"
+        )
 
     def open_settings(self):
         log().verbose("Opening Settings Activity...")
-        return self.client.shell("am start -a android.intent.action.MAIN -n com.android.settings/.Settings")
+        return self.client.shell(
+            "am start -a android.intent.action.MAIN -n com.android.settings/.Settings"
+        )
 
     def open_bluetooth_settings(self):
         log().verbose("Opening Blueooth Settings Activity...")
@@ -181,7 +192,8 @@ class ADBDevice(object):
     def open_monitor_client(self):
         log().verbose("Opening Monitor Client...")
         return self.client.shell(
-            "am start -a android.intent.action.MAIN -n com.iwedia.stbmclient/com.example.stbmclient.STBMonitorClientActivity")
+            "am start -a android.intent.action.MAIN -n com.iwedia.stbmclient/com.example.stbmclient.STBMonitorClientActivity"
+        )
 
     """ -----------------------------------------------------------------------"""
     """ Private Methods """

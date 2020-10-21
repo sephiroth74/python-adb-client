@@ -3,7 +3,7 @@
 
 import enum
 
-__all__ = ['KeyCodes', 'CPlusPlusKeyCodes']
+__all__ = ["KeyCodes", "CPlusPlusKeyCodes"]
 
 
 class KeyCodes(enum.Enum):
