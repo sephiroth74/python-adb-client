@@ -73,12 +73,23 @@ class ADBDeviceTestCase(unittest.TestCase):
 
     def test_006(self):
         print("test_006")
+
+        package = self.device.client.get_package("com.swisscom.android.tv.library")
+        user_id = package.uuid
+        log.debug(f"user_id: {user_id}")
+
         intent = Intent("swisscom.android.tv.action.HANDLE_NOTIFICATION")
         intent.component = "com.swisscom.android.tv.library/.internal.services.NotificationService"
         intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_EVENT"] = "Eleanor.Notification.Device.Message"
         intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_DATA"] = '{\\"data\\":\\"{}\\"}'
-
         result = self.device.am_startservice(intent)
+        log.debug(result)
+        self.assertTrue(result.is_ok())
+
+        intent = Intent("swisscom.android.tv.action.NAVIGATE", extras=Intent.Extras())
+        intent.waitforlaunchtocomplete(True)
+        intent.extras.es['swisscom.android.tv.extra.NAVIGATION_PATH'] = '/home'
+        result = self.device.am_broadcast(intent)
         log.debug(result)
         self.assertTrue(result.is_ok())
 

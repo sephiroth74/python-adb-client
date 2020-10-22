@@ -63,7 +63,8 @@ class Intent(object):
         self.category: Optional[str] = None
         self.component: Optional[str] = None
         self.flags: int = 0
-        self.wait = False
+        self.wait: bool = False
+        self.user_id: int = 0
         self.extras: Intent.Extras = extras
 
     def waitforlaunchtocomplete(self, value: bool):
@@ -71,8 +72,13 @@ class Intent(object):
 
     def build(self) -> str:
         args = list()
+
         if self.wait:
             args.append("-W")
+
+        if self.user_id > 0:
+            args.append(f"--user {self.user_id}")
+
         args.append(f"-a {self.action}")
         append_str_argument(args, "-n", self.component)
         append_str_argument(args, "-d", self.data_uri)
