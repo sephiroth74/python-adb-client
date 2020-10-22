@@ -12,6 +12,7 @@ from . import Intent
 from . import ADBClient
 from . import adb_connection
 from . import propertyparser
+from . import ActivityManager
 from .adb_connection import ADBCommandResult
 
 __all__ = ["ADBDevice"]
@@ -28,11 +29,16 @@ class ADBDevice(object):
     def __init__(self, client: ADBClient):
         self._client = client
         self._name = None
+        self._am = ActivityManager(self._client)
         self._executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count())
 
     @property
     def client(self) -> ADBClient:
         return self._client
+
+    @property
+    def am(self) -> ActivityManager:
+        return self._am
 
     @property
     def name(self) -> Optional[str]:
@@ -118,25 +124,6 @@ class ADBDevice(object):
     def async_send_text(self, char: str) -> Future[ADBCommandResult]:
         assert type(char) is str
         return self._executor.submit(self.client.send_text, char)
-
-    """ -----------------------------------------------------------------------"""
-    """ Activity Manager """
-    """ -----------------------------------------------------------------------"""
-
-    def am_broadcast(self, intent: Intent):
-        arguments = intent.build()
-        log().verbose(f"broadcast with arguments {arguments}")
-        return self.client.shell(f"am broadcast {arguments}")
-
-    def am_startservice(self, intent: Intent):
-        arguments = intent.build()
-        log().verbose(f"startservice with arguments {arguments}")
-        return self.client.shell(f"am startservice {arguments}")
-
-    def am_start(self, intent: Intent):
-        arguments = intent.build()
-        log().verbose(f"start with arguments {arguments}")
-        return self.client.shell(f"am start {arguments}")
 
     """ -----------------------------------------------------------------------"""
     """ Activities """
