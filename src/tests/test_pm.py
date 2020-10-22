@@ -5,8 +5,8 @@ import os
 import unittest
 from pathlib import Path
 
-from adb import ADBClient, PackageManager
-from adb.adb_connection import ADBCommandResult
+from pythonadb import ADBClient, PackageManager
+from pythonadb.adb_connection import ADBCommandResult
 from . import get_logger
 from .test_const import DEVICE_IP, DEBUG_APK, DEBUG_APK_PACKAGE
 

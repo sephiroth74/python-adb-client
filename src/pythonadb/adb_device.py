@@ -9,6 +9,7 @@ from typing import Optional, IO
 
 from . import ADBClient
 from . import ActivityManager
+from . import PackageManager
 from . import adb_connection
 from . import propertyparser
 
@@ -17,7 +18,6 @@ __all__ = ["ADBDevice"]
 
 def log():
     from . import _logger
-
     logger = _logger.get_logger(__name__)
     return logger
 
@@ -27,6 +27,7 @@ class ADBDevice(object):
         self._client = client
         self._name: Optional[str] = None
         self._am = ActivityManager(self._client)
+        self._pm = PackageManager(self._client)
         self._executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count())
 
     @property
@@ -36,6 +37,10 @@ class ADBDevice(object):
     @property
     def am(self) -> ActivityManager:
         return self._am
+
+    @property
+    def pm(self) -> PackageManager:
+        return self._pm
 
     @property
     def name(self) -> Optional[str]:
@@ -69,12 +74,12 @@ class ADBDevice(object):
         return self.client.shell("screencap -p %s" % output)
 
     def screenrecord(
-        self,
-        file: str,
-        bugreport: bool = False,
-        bitrate: int = 8000000,
-        timelimit: int = 0,
-        **kwargs,
+            self,
+            file: str,
+            bugreport: bool = False,
+            bitrate: int = 8000000,
+            timelimit: int = 0,
+            **kwargs,
     ) -> bool:
         log().verbose(f"screenrecord to {file}")
 

@@ -11,7 +11,6 @@ __all__ = ["ActivityManager"]
 
 def log():
     from . import _logger
-
     return _logger.get_logger(__name__)
 
 

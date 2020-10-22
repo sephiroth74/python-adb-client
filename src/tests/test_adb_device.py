@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from adb import ADBClient, ADBDevice, KeyCodes, Intent
+from pythonadb import ADBClient, ADBDevice, KeyCodes, Intent
 from . import get_logger
 from .test_const import DEVICE_IP, DESKTOP_FOLDER
 

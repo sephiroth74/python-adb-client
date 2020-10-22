@@ -7,7 +7,7 @@ assert sys.version_info >= (3, 8, 0), "STB Utilities requires Python 3.8+"
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-VERSIONFILE = "src/adb/_version.py"
+VERSIONFILE = "src/pythonadb/_version.py"
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
@@ -17,7 +17,7 @@ else:
     raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
 setup(
-    name="adb-client",
+    name="pythonadb",
     version=verstr,
     author="Alessandro Crugnola",
     author_email="alessandro.crugnola@gmail.com",

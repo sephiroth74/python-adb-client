@@ -1,11 +1,16 @@
 import unittest
 
-from adb import Intent
+from pythonadb import Intent
+from . import get_logger
+
+log = get_logger("==> test_intent")
 
 
 class ItentBuilderTestCase(unittest.TestCase):
     def test_001(self):
         print("test_001")
+
+        log.debug("sending android.intent.action.VIEW...")
 
         i = Intent(action="android.intent.action.VIEW")
         i.waitforlaunchtocomplete(True)

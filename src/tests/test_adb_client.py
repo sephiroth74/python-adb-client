@@ -5,8 +5,8 @@ import os
 import unittest
 from pathlib import Path
 
-from adb import ADBClient, KeyCodes, packageparser
-from adb.adb_connection import ADBCommandResult
+from pythonadb import ADBClient, KeyCodes, packageparser
+from pythonadb.adb_connection import ADBCommandResult
 from . import get_logger
 from .test_const import DEVICE_IP
 

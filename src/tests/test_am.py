@@ -5,7 +5,7 @@ import os
 import unittest
 import time
 
-from adb import ADBClient, Intent, ActivityManager, KeyCodes
+from pythonadb import ADBClient, Intent, ActivityManager, KeyCodes
 from . import get_logger
 from .test_const import DEVICE_IP
 
@@ -26,7 +26,7 @@ class ActivityManagerTestCase(unittest.TestCase):
         time.sleep(1)
 
     def test_001(self):
-        print("test_001")
+        log.info("test_001")
         intent = Intent("swisscom.android.tv.action.NAVIGATE", extras=Intent.Extras())
         intent.waitforlaunchtocomplete(True)
         intent.extras.es["swisscom.android.tv.extra.NAVIGATION_PATH"] = "/sport"
@@ -35,13 +35,13 @@ class ActivityManagerTestCase(unittest.TestCase):
         self.assertTrue(result.is_ok())
 
     def test_002(self):
-        print("test_002")
+        log.info("test_002")
         time.sleep(1)
         self.am.client.send_key(KeyCodes.KEYCODE_BACK.value)
         time.sleep(1)
 
     def test_003(self):
-        print("test_003")
+        log.info("test_003")
         package = self.am.client.get_package("com.swisscom.android.tv.library")
         user_id = package.uuid
         log.debug(f"user_id: {user_id}")
@@ -62,7 +62,7 @@ class ActivityManagerTestCase(unittest.TestCase):
         self.am.client.send_key(KeyCodes.KEYCODE_BACK.value)
 
     def test_004(self):
-        print("test_005")
+        log.info("test_005")
         intent = Intent("android.intent.action.VIEW")
         intent.data_uri = "http://www.google.com"
         intent.waitforlaunchtocomplete(True)

@@ -173,7 +173,7 @@ from typing import List, Optional, Dict, Tuple, Any
 
 import zope.event
 
-from adb import events
+from .. import events
 
 __all__ = [
     "ADBCommandResult",
@@ -404,7 +404,7 @@ def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
     output = subprocess.PIPE if "stdout" not in kwargs else kwargs["stdout"]
 
     try:
-        log().spam(f"Executing `{command_log}`")
+        log().debug(f"Executing `{command_log}`")
         out = subprocess.Popen(
             command_full.split(), stderr=subprocess.STDOUT, stdout=output
         )
@@ -433,7 +433,7 @@ def capture_output(
     command_full = f"{adb} {command_line}"
     command_log = f"adb {command_line}"
     try:
-        log().spam(f"Executing `{command_log}`")
+        log().debug(f"Executing `{command_log}`")
         out = subprocess.Popen(
             command_full.split(),
             stderr=subprocess.PIPE,
@@ -460,7 +460,7 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     command_line = f"{ip_arg} shell {command} {get_extra_arguments(**kwargs)}"
     command_full = f"{adb} {command_line}"
     command_log = f"adb {command_line}"
-    log().spam(f"Executing `{command_log}`")
+    log().debug(f"Executing `{command_log}`")
 
     out = subprocess.Popen(
         command_full.split(),
@@ -616,7 +616,7 @@ def connect(ip: str) -> bool:
     log().debug(f"Connecting to {ip}..")
 
     if is_connected(ip=ip):
-        log().notice("Already connected...")
+        log().info("Already connected...")
         return True
 
     try:

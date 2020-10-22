@@ -5,7 +5,7 @@ from pathlib import Path
 
 import zope.event
 
-from adb import adb_connection
+from pythonadb import adb_connection
 from . import get_logger
 from .test_const import DEVICE_IP
 
