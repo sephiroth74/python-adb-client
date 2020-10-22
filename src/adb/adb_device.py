@@ -8,6 +8,7 @@ from asyncio import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Optional, IO
 
+from . import Intent
 from . import ADBClient
 from . import adb_connection
 from . import propertyparser
@@ -87,12 +88,12 @@ class ADBDevice(object):
         return self.client.shell("screencap -p %s" % output)
 
     def screenrecord(
-        self,
-        file: str,
-        bugreport: bool = False,
-        bitrate: int = 8000000,
-        timelimit: int = 0,
-        **kwargs,
+            self,
+            file: str,
+            bugreport: bool = False,
+            bitrate: int = 8000000,
+            timelimit: int = 0,
+            **kwargs,
     ) -> bool:
         log().verbose(f"screenrecord to {file}")
 
@@ -119,65 +120,27 @@ class ADBDevice(object):
         return self._executor.submit(self.client.send_text, char)
 
     """ -----------------------------------------------------------------------"""
-    """ Intents """
+    """ Activity Manager """
     """ -----------------------------------------------------------------------"""
 
-    def broadcast(self, action: str, component_name: Optional[str], *args, **kwargs):
-        """
-        Send a broadcast to the device.\n
-        More infor about the extra intent arguments: https://developer.android.com/studio/command-line/adb#IntentSpec
+    def am_broadcast(self, intent: Intent):
+        arguments = intent.build()
+        log().verbose(f"broadcast with arguments {arguments}")
+        return self.client.shell(f"am broadcast {arguments}")
 
-        -d data_uri
-        -t mime_type
-        -c category
-        -f flags
+    def am_startservice(self, intent: Intent):
+        arguments = intent.build()
+        log().verbose(f"startservice with arguments {arguments}")
+        return self.client.shell(f"am startservice {arguments}")
 
-        kwargs can contain any of the following ( key, value)
-        --esn extra_key
-            Add a null extra. This option is not supported for URI intents.
-        -e | --es extra_key extra_string_value
-            Add string data as a key-value pair.
-        --ez extra_key extra_boolean_value
-            Add boolean data as a key-value pair.
-        --ei extra_key extra_int_value
-            Add integer data as a key-value pair.
-        --el extra_key extra_long_value
-            Add long data as a key-value pair.
-        --ef extra_key extra_float_value
-            Add float data as a key-value pair.
-        --eu extra_key extra_uri_value
-            Add URI data as a key-value pair.
-        --ecn extra_key extra_component_name_value
-            Add a component name, which is converted and passed as a ComponentName object.
-        --eia extra_key extra_int_value[,extra_int_value...]
-            Add an array of integers.
-        --ela extra_key extra_long_value[,extra_long_value...]
-            Add an array of longs.
-        --efa extra_key extra_float_value[,extra_float_value...]
-            Add an array of floats.
+    def am_start(self, intent: Intent):
+        arguments = intent.build()
+        log().verbose(f"start with arguments {arguments}")
+        return self.client.shell(f"am start {arguments}")
 
-            extras = raw extra string
-        """
-        action = f"-a {action}"
-        component = ("-n %s" % component_name) if component_name else ""
-        extras = []
-        if "extras" in kwargs:
-            extras.append(kwargs["extras"])
-        extras.extend(args)
-        return self.client.shell(
-            f"am broadcast {action} {component} {' '.join(extras)}"
-        )
-
-    def startservice(self, action: str, component_name: Optional[str], *args, **kwargs):
-        action = f"-a {action}"
-        component = ("-n %s" % component_name) if component_name else ""
-        extras = []
-        if "extras" in kwargs:
-            extras.append(kwargs["extras"])
-        extras.extend(args)
-        return self.client.shell(
-            f"am startservice {action} {component} {' '.join(extras)}"
-        )
+    """ -----------------------------------------------------------------------"""
+    """ Activities """
+    """ -----------------------------------------------------------------------"""
 
     def open_settings(self):
         log().verbose("Opening Settings Activity...")

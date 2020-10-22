@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from adb import ADBClient, ADBDevice, KeyCodes
+from adb import ADBClient, ADBDevice, KeyCodes, Intent
 from . import get_logger
 from .test_const import DEVICE_IP, DESKTOP_FOLDER
 
@@ -65,24 +65,20 @@ class ADBDeviceTestCase(unittest.TestCase):
 
     def test_005(self):
         print("test_005")
-        result = self.device.broadcast(
-            "android.intent.action.VIEW", None, "-d", "http://www.google.com"
-        )
+        intent = Intent("android.intent.action.VIEW")
+        intent.data_uri = "http://www.google.com"
+        result = self.device.am_broadcast(intent)
         log.debug(result)
         self.assertTrue(result.is_ok())
 
     def test_006(self):
         print("test_006")
-        result = self.device.startservice(
-            "swisscom.android.tv.action.HANDLE_NOTIFICATION",
-            "com.swisscom.android.tv.library/.internal.services.NotificationService",
-            "--es",
-            "swisscom.android.tv.extra.NOTIFICATION_EVENT",
-            "Eleanor.Notification.Device.Message",
-            "--es",
-            "swisscom.android.tv.extra.NOTIFICATION_DATA",
-            '{\\"data\\":\\"{}\\"}',
-        )
+        intent = Intent("swisscom.android.tv.action.HANDLE_NOTIFICATION")
+        intent.component = "com.swisscom.android.tv.library/.internal.services.NotificationService"
+        intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_EVENT"] = "Eleanor.Notification.Device.Message"
+        intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_DATA"] = '{\\"data\\":\\"{}\\"}'
+
+        result = self.device.am_startservice(intent)
         log.debug(result)
         self.assertTrue(result.is_ok())
 
@@ -90,14 +86,14 @@ class ADBDeviceTestCase(unittest.TestCase):
         print("test_007")
         self.assertTrue(
             self.device.async_send_key(KeyCodes.KEYCODE_DPAD_CENTER.value)
-            .result()
-            .is_ok()
+                .result()
+                .is_ok()
         )
         time.sleep(1)
         self.assertTrue(
             self.device.async_send_key(KeyCodes.KEYCODE_DPAD_DOWN.value)
-            .result()
-            .is_ok()
+                .result()
+                .is_ok()
         )
 
     def test_008(self):
