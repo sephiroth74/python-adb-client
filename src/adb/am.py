@@ -6,10 +6,12 @@ from __future__ import annotations
 from . import Intent
 from . import ADBClient
 
-__all__ = ['ActivityManager']
+__all__ = ["ActivityManager"]
+
 
 def log():
     from . import _logger
+
     return _logger.get_logger(__name__)
 
 

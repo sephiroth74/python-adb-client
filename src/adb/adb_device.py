@@ -4,16 +4,13 @@
 from __future__ import annotations
 
 import multiprocessing
-from asyncio import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Optional, IO
 
-from . import Intent
 from . import ADBClient
+from . import ActivityManager
 from . import adb_connection
 from . import propertyparser
-from . import ActivityManager
-from .adb_connection import ADBCommandResult
 
 __all__ = ["ADBDevice"]
 
@@ -28,7 +25,7 @@ def log():
 class ADBDevice(object):
     def __init__(self, client: ADBClient):
         self._client = client
-        self._name = None
+        self._name: Optional[str] = None
         self._am = ActivityManager(self._client)
         self._executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count())
 
@@ -63,28 +60,6 @@ class ADBDevice(object):
         self._executor.shutdown()
         self._client = None
 
-    def uninstall_package(self, package: str):
-        log().verbose(f"uninstall {package}")
-        if self.client.is_package_installed(package):
-            if self.client.is_system_package(package):
-                return self.client.execute(f"shell pm uninstall --user 0 {package}")
-            else:
-                return self.client.execute(f"shell pm uninstall {package}")
-        else:
-            log().warning(f"{package} is not installed")
-            return False
-
-    def clear_package(self, package: str) -> bool:
-        log().verbose(f"clear {package}")
-        if self.client.is_package_installed(package):
-            if self.client.is_system_package(package):
-                return self.client.execute(f"shell pm clear --user 0 {package}")
-            else:
-                return self.client.execute(f"shell pm clear {package}")
-        else:
-            log().warning(f"{package} is not installed")
-            return False
-
     def write_screencap(self, fp: IO) -> bool:
         log().verbose("write screencap")
         return self.client.execute("exec-out screencap -p", stdout=fp)
@@ -94,12 +69,12 @@ class ADBDevice(object):
         return self.client.shell("screencap -p %s" % output)
 
     def screenrecord(
-            self,
-            file: str,
-            bugreport: bool = False,
-            bitrate: int = 8000000,
-            timelimit: int = 0,
-            **kwargs,
+        self,
+        file: str,
+        bugreport: bool = False,
+        bitrate: int = 8000000,
+        timelimit: int = 0,
+        **kwargs,
     ) -> bool:
         log().verbose(f"screenrecord to {file}")
 
@@ -118,10 +93,10 @@ class ADBDevice(object):
     """ Events """
     """ -----------------------------------------------------------------------"""
 
-    def async_send_key(self, key: int) -> Future[ADBCommandResult]:
+    def async_send_key(self, key: int):
         return self._executor.submit(self.client.send_key, key)
 
-    def async_send_text(self, char: str) -> Future[ADBCommandResult]:
+    def async_send_text(self, char: str):
         assert type(char) is str
         return self._executor.submit(self.client.send_text, char)
 

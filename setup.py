@@ -30,7 +30,7 @@ setup(
     package_dir={"": "src"},
     python_requires=">=3.8",
     packages=find_namespace_packages(where="src", exclude=("tests", "htmlconv")),
-    test_suite='nose.collector',
+    test_suite="nose.collector",
     install_requires=[
         "verboselogs>=1.7",
         "zope.event>=4.5.0",

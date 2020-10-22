@@ -206,6 +206,8 @@ __all__ = [
     "version",
     "wait_for_device",
     "which",
+    "extends_extra_arguments",
+    "expand_extra_arguments",
 ]
 
 adb_path = None
@@ -293,13 +295,15 @@ class ADBCommandResult(object):
     RESULT_ERROR = 1
 
     def __init__(
-            self,
-            result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
-            code: int = RESULT_OK,
+        self,
+        result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
+        code: int = RESULT_OK,
     ):
         super(ADBCommandResult, self).__init__()
         self._stdout = result[0] if result[0] else None
-        self._stderr = result[1].decode("utf-8").strip() if result[1] else None
+        self._stderr = (
+            result[1].decode("utf-8").strip() if result[1] is not None else None
+        )
         self._code = code
 
     def __iter__(self):
@@ -414,7 +418,7 @@ def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
 
 
 def capture_output(
-        command: str, ip: Optional[str] = None, **kwargs
+    command: str, ip: Optional[str] = None, **kwargs
 ) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
@@ -683,7 +687,7 @@ def remount(ip: Optional[str] = None) -> bool:
 
 
 def remount_as(
-        ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
+    ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
 ) -> bool:
     """
     Mount/Remount file-system
@@ -697,13 +701,13 @@ def remount_as(
             return False
     if writeable:
         return (
-                shell(f"mount -o rw,remount {folder}", ip=ip).code
-                == ADBCommandResult.RESULT_OK
+            shell(f"mount -o rw,remount {folder}", ip=ip).code
+            == ADBCommandResult.RESULT_OK
         )
     else:
         return (
-                shell(f"mount -o ro,remount {folder}", ip=ip).code
-                == ADBCommandResult.RESULT_OK
+            shell(f"mount -o ro,remount {folder}", ip=ip).code
+            == ADBCommandResult.RESULT_OK
         )
 
 

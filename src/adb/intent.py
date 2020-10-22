@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Optional, List, Dict, Any
 
-__all__ = ['Intent']
+__all__ = ["Intent"]
 
 
 class Intent(object):
@@ -35,7 +35,7 @@ class Intent(object):
             if self.raw_extras:
                 return self.raw_extras
 
-            args = list()
+            args: List[str] = list()
             append_dict_argument(args, "--es", self.es)
             append_dict_argument(args, "--ez", self.ez)
             append_dict_argument(args, "--ei", self.ei)
@@ -54,7 +54,7 @@ class Intent(object):
                 args.append("--exclude-stopped-packages")
             if self.include_stopped_packages:
                 args.append("--include-stopped-packages")
-            return ' '.join(args)
+            return " ".join(args)
 
     def __init__(self, action: str, extras: Optional[Extras] = Extras()):
         self.action = action
@@ -65,7 +65,7 @@ class Intent(object):
         self.flags: int = 0
         self.wait: bool = False
         self.user_id: int = 0
-        self.extras: Intent.Extras = extras
+        self.extras = extras
 
     def waitforlaunchtocomplete(self, value: bool):
         self.wait = value
@@ -85,8 +85,9 @@ class Intent(object):
         append_str_argument(args, "-t", self.mime_type)
         append_str_argument(args, "-c", self.category)
         append_int_argument(args, "-f", self.flags, 0)
-        args.append(self.extras.build())
-        return ' '.join(args)
+        if self.extras:
+            args.append(self.extras.build())
+        return " ".join(args)
 
 
 def append_dict_argument(target: List[str], key: str, option: Dict[str, Any]):
@@ -94,7 +95,7 @@ def append_dict_argument(target: List[str], key: str, option: Dict[str, Any]):
         for k, v in option.items():
             string = f"{key} {k} "
             if isinstance(v, list):
-                string += ' '.join(str(x) for x in v)
+                string += " ".join(str(x) for x in v)
             else:
                 string += v
             target.append(string)

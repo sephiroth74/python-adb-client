@@ -3,20 +3,19 @@
 
 import os
 import unittest
-
 from pathlib import Path
 
 from adb import ADBClient, KeyCodes, packageparser
 from adb.adb_connection import ADBCommandResult
 from . import get_logger
-from .test_const import DEVICE_IP, DEBUG_APK, DEBUG_APK_PACKAGE
+from .test_const import DEVICE_IP
 
 log = get_logger("==> test_adb_client")
 
 THIS_FILE_NAME = os.path.basename(__file__)
 
 
-class MyTestCase(unittest.TestCase):
+class ADBClientTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         ADBClient.disconnect_all()
@@ -34,31 +33,6 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(self.client.is_root())
         self.client.unroot()
         self.assertFalse(self.client.is_root())
-        self.assertTrue(self.client.is_package_installed("com.android.bluetooth"))
-
-    @unittest.skip
-    def test_001(self):
-        print("test_001")
-        packages = self.client.list_packages()
-        self.assertTrue(len(packages) > 0)
-        self.assertIsNotNone(packages[0].name)
-
-        packages = self.client.list_packages(args=("-f",))
-        self.assertIsNotNone(packages[0].apk)
-        self.assertIsNone(packages[0].uuid)
-        self.assertIsNone(packages[0].installer)
-
-        packages = self.client.list_packages(args=("-U",))
-        self.assertIsNotNone(packages[0].uuid)
-        self.assertIsNone(packages[0].apk)
-        self.assertIsNone(packages[0].installer)
-
-        packages = self.client.list_packages("com.android.bluetooth")
-        self.assertTrue(len(packages) == 1)
-        self.assertEqual("com.android.bluetooth", packages[0].name)
-
-        packages = self.client.list_packages("com.android.bla.bla")
-        self.assertTrue(len(packages) == 0)
 
     @unittest.skip
     def test_003(self):
@@ -110,18 +84,6 @@ class MyTestCase(unittest.TestCase):
         self.assertIsNotNone(output)
         self.assertIn("adb_enabled", output)
         self.assertEqual("1", output["adb_enabled"])
-
-    @unittest.skip
-    def test_007(self):
-        print("test_007")
-        code, output, error = self.client.dump_package("com.android.bluetooth")
-        self.assertEqual(ADBCommandResult.RESULT_OK, code)
-        self.assertIsNotNone(output)
-        self.assertTrue(len(output) > 0)
-
-        code, output, error = self.client.dump_package("invalid.package.name")
-        self.assertEqual(ADBCommandResult.RESULT_ERROR, code)
-        self.assertIsNone(output)
 
     @unittest.skip
     def test_008(self):
@@ -242,59 +204,6 @@ class MyTestCase(unittest.TestCase):
         dest_file.unlink()
 
     @unittest.skip
-    def test_015(self):
-        print("test_015")
-        result = self.client.get_runtime_permissions("com.android.bluetooth")
-        log.spam(f"permissions: {result.keys()}")
-        self.assertTrue(len(result) > 0)
-
-    @unittest.skip
-    def test_016(self):
-        print("test_016")
-        result = self.client.get_package("com.android.bluetooth")
-        log.debug(f"package: {result}")
-        self.assertIsNotNone(result)
-        self.assertTrue(result.is_system())
-        self.assertEqual("com.android.bluetooth", result.name)
-        self.assertIsNotNone(result.uuid)
-
-    def test_017(self):
-        apk_file = Path(DEBUG_APK)
-
-        if self.client.is_package_installed(DEBUG_APK_PACKAGE):
-            self.assertEqual(
-                ADBCommandResult.RESULT_OK,
-                self.client.uninstall_package(DEBUG_APK_PACKAGE).code,
-            )
-
-        self.assertFalse(self.client.is_package_installed(DEBUG_APK_PACKAGE))
-
-        result = self.client.install_package(apk_file)
-        log.debug(f"result = {result}")
-        self.assertTrue(result.is_ok())
-        self.assertTrue(self.client.is_package_installed(DEBUG_APK_PACKAGE))
-        self.assertFalse(self.client.is_system_package(DEBUG_APK_PACKAGE))
-
-        log.debug("runtime permissions:")
-        for key, value in self.client.get_runtime_permissions(
-            DEBUG_APK_PACKAGE
-        ).items():
-            log.spam(f"{key} = {value}")
-
-        log.debug("install permissions:")
-        for key, value in self.client.get_install_permissions(
-            DEBUG_APK_PACKAGE
-        ).items():
-            log.spam(f"{key} = {value}")
-
-        log.debug("requested permissions:")
-        for line in self.client.get_requested_permissions(DEBUG_APK_PACKAGE):
-            log.spam(f"permission={line}")
-
-        result = self.client.has_runtime_permission(DEBUG_APK_PACKAGE, "android.permission.ACCESS_COARSE_LOCATION")
-        result = self.client.has_runtime_permission(DEBUG_APK_PACKAGE, "android.permission.SYSTEM_ALERT_WINDOW")
-
-    @unittest.skip
     def test_018(self):
         print("test_018")
         model = self.client.getprop("ro.product.model")
@@ -313,21 +222,12 @@ class MyTestCase(unittest.TestCase):
         self.client.setprop("persist.scm.dialog.allow", "true" if result else "false")
         self.assertEqual(result, self.client.getprop("persist.scm.dialog.allow"))
 
-    def test_019(self):
-        print("test_019")
-        self.assertTrue(self.client.reload_package("com.android.bluetooth").is_ok())
-
-    def test_020(self):
-        print("test_20")
-        result = self.client.is_system_package("com.android.bluetooth")
-        self.assertTrue(result)
-        self.assertFalse(self.client.is_system_package(DEBUG_APK_PACKAGE))
-
     def test_021(self):
         print("test_021")
         result = self.client.dumpsys("package r service")
         parser = packageparser.PackageParser(result.output())
         log.debug(parser.data)
+
 
 if __name__ == "__main__":
     unittest.main()

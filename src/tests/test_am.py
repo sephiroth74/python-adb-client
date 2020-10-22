@@ -29,7 +29,7 @@ class ActivityManagerTestCase(unittest.TestCase):
         print("test_001")
         intent = Intent("swisscom.android.tv.action.NAVIGATE", extras=Intent.Extras())
         intent.waitforlaunchtocomplete(True)
-        intent.extras.es['swisscom.android.tv.extra.NAVIGATION_PATH'] = '/sport'
+        intent.extras.es["swisscom.android.tv.extra.NAVIGATION_PATH"] = "/sport"
         result = self.am.broadcast(intent)
         log.debug(result)
         self.assertTrue(result.is_ok())
@@ -47,9 +47,13 @@ class ActivityManagerTestCase(unittest.TestCase):
         log.debug(f"user_id: {user_id}")
 
         intent = Intent("swisscom.android.tv.action.HANDLE_NOTIFICATION")
-        intent.component = "com.swisscom.android.tv.library/.internal.services.NotificationService"
-        intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_EVENT"] = "Eleanor.Notification.Show.LoginCode"
-        intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_DATA"] = '{}'
+        intent.component = (
+            "com.swisscom.android.tv.library/.internal.services.NotificationService"
+        )
+        intent.extras.es[
+            "swisscom.android.tv.extra.NOTIFICATION_EVENT"
+        ] = "Eleanor.Notification.Show.LoginCode"
+        intent.extras.es["swisscom.android.tv.extra.NOTIFICATION_DATA"] = "{}"
         result = self.am.startservice(intent)
         log.debug(result)
         self.assertTrue(result.is_ok())
@@ -67,5 +71,5 @@ class ActivityManagerTestCase(unittest.TestCase):
         self.assertTrue(result.is_ok())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

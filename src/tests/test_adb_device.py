@@ -64,14 +64,14 @@ class ADBDeviceTestCase(unittest.TestCase):
         print("test_007")
         self.assertTrue(
             self.device.async_send_key(KeyCodes.KEYCODE_DPAD_CENTER.value)
-                .result()
-                .is_ok()
+            .result()
+            .is_ok()
         )
         time.sleep(1)
         self.assertTrue(
             self.device.async_send_key(KeyCodes.KEYCODE_DPAD_DOWN.value)
-                .result()
-                .is_ok()
+            .result()
+            .is_ok()
         )
 
     def test_008(self):
