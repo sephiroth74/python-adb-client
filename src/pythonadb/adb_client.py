@@ -98,15 +98,18 @@ class ADBClient(object):
 
     def remount(self):
         self._connect_if_disconnected()
-        return adb_connection.reboot(ip=self._identifier)
+        return adb_connection.remount(ip=self._identifier)
 
-    def reboot(self, wait_device: bool = False):
+    def reboot(self, mode: Optional[str] = None, wait_device: bool = False):
         self._connect_if_disconnected()
-        if adb_connection.reboot(ip=self._identifier):
+        if adb_connection.reboot(ip=self._identifier, mode=mode):
             if wait_device:
                 return self.wait_for_device()
             return True
         return False
+
+    def bugreport(self, dst: Optional[str] = None):
+        adb_connection.bugreport(dst, self._identifier)
 
     def get_id(self) -> Optional[str]:
         """
@@ -121,7 +124,7 @@ class ADBClient(object):
         return None
 
     def getprop(
-        self, key: Optional[str] = None
+            self, key: Optional[str] = None
     ) -> Optional[Union[str, Dict[str, str]]]:
         if key:
             with self.shell(f"getprop {key}") as result:

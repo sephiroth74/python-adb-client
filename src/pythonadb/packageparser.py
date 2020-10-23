@@ -17,6 +17,9 @@ def is_line_empty(line: str) -> bool:
 
 
 class PackageParser(object):
+    """"
+    Parse the dumpsys output
+    """
     def __init__(self, string: str):
         lines = list(map(lambda x: x.rstrip(), string.strip().splitlines()))
         self._data = PackageParser.PackageNode.parse(lines)

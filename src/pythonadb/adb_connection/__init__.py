@@ -295,9 +295,9 @@ class ADBCommandResult(object):
     RESULT_ERROR = 1
 
     def __init__(
-        self,
-        result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
-        code: int = RESULT_OK,
+            self,
+            result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
+            code: int = RESULT_OK,
     ):
         super(ADBCommandResult, self).__init__()
         self._stdout = result[0] if result[0] else None
@@ -411,14 +411,14 @@ def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
         result = out.communicate()
         if not command == "get-state":
             result_str = result[0].decode("utf-8").strip() if result[0] else "None"
-            log().spam(f"Result(code={result_str}, result={out.returncode})")
+            log().spam(f"Result(code={out.returncode}, result={result_str})")
         return out.returncode == ADBCommandResult.RESULT_OK
     except subprocess.CalledProcessError:
         return False
 
 
 def capture_output(
-    command: str, ip: Optional[str] = None, **kwargs
+        command: str, ip: Optional[str] = None, **kwargs
 ) -> ADBCommandResult:
     """
     Execute an adb command on the given device and return the result
@@ -433,7 +433,8 @@ def capture_output(
     command_full = f"{adb} {command_line}"
     command_log = f"adb {command_line}"
     try:
-        log().debug(f"Executing `{command_log}`")
+        if kwargs.get("log", True):
+            log().debug(f"Executing `{command_log}`")
         out = subprocess.Popen(
             command_full.split(),
             stderr=subprocess.PIPE,
@@ -602,8 +603,8 @@ def is_connected(ip: Optional[str] = None) -> bool:
     :param ip:  device ip
     :return: true if connected
     """
-    result = capture_output(command="get-state", ip=ip)
-    log().spam(result)
+    result = capture_output(command="get-state", ip=ip, log=False)
+    # log().spam(result)
     return result.code == ADBCommandResult.RESULT_OK and result.output() == "device"
 
 
@@ -662,13 +663,15 @@ def disconnect(ip: str) -> bool:
     return False
 
 
-def reboot(ip: Optional[str] = None) -> bool:
+def reboot(ip: Optional[str] = None, mode: Optional[str] = None) -> bool:
     """
     Reboot the device
     :param ip:              device ip
+    :param mode:            reboot type
     :return:                True on success
     """
-    if execute("reboot", ip=ip):
+    command = "reboot {}".format(mode if mode else "")
+    if execute(command, ip=ip):
         zope.event.notify(events.ADBEvent(events.ADBConnectionEvent.Reboot, ip))
         return True
     return False
@@ -687,7 +690,7 @@ def remount(ip: Optional[str] = None) -> bool:
 
 
 def remount_as(
-    ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
+        ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
 ) -> bool:
     """
     Mount/Remount file-system
@@ -701,13 +704,13 @@ def remount_as(
             return False
     if writeable:
         return (
-            shell(f"mount -o rw,remount {folder}", ip=ip).code
-            == ADBCommandResult.RESULT_OK
+                shell(f"mount -o rw,remount {folder}", ip=ip).code
+                == ADBCommandResult.RESULT_OK
         )
     else:
         return (
-            shell(f"mount -o ro,remount {folder}", ip=ip).code
-            == ADBCommandResult.RESULT_OK
+                shell(f"mount -o ro,remount {folder}", ip=ip).code
+                == ADBCommandResult.RESULT_OK
         )
 
 
