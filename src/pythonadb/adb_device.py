@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
-from typing import Optional, IO
+from typing import Optional, IO, Dict
 
+from .packageparser import PackageParser
 from . import ADBClient
 from . import ActivityManager
 from . import PackageManager
@@ -124,6 +125,31 @@ class ADBDevice(object):
         return self.client.shell(
             "am start -a android.intent.action.MAIN -n com.iwedia.stbmclient/com.example.stbmclient.STBMonitorClientActivity"
         )
+
+    """ DumpSys Wrapper """
+
+    def get_services_info(self) -> Optional[Dict]:
+        result = self.client.dumpsys("package r service")
+        if result.is_ok():
+            p = PackageParser(result.output())
+            if 'Service Resolver Table:' in p:
+                if 'Non-Data Actions:' in p['Service Resolver Table:']:
+                    return p['Service Resolver Table:']['Non-Data Actions:']
+        return None
+
+    def get_receivers_info(self) -> Optional[Dict]:
+        """
+        Executes `dumpsys package r receiver` on the connected device and return a table
+        with all the registered receivers
+        :return:
+        """
+        result = self.client.dumpsys("package r receiver")
+        if result.is_ok():
+            p = PackageParser(result.output())
+            if 'Receiver Resolver Table:' in p:
+                if 'Non-Data Actions:' in p['Receiver Resolver Table:']:
+                    return p['Receiver Resolver Table:']['Non-Data Actions:']
+        return None
 
     """ -----------------------------------------------------------------------"""
     """ Private Methods """

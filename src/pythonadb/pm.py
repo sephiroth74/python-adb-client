@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import re
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
+
+from xml.etree import ElementTree
 
 from . import ADBClient
 from . import Package
@@ -118,6 +121,14 @@ class PackageManager(object):
         else:
             log().warning(f"{package} is not installed")
             return ADBCommandResult.from_error()
+
+    def remove_entry(self, package: str) -> bool:
+        """
+        Remove the package entry from packages.xml and packages.list inside /data/system
+        :param package:
+        :return:
+        """
+        return _remove_package_from_packages(self.client, package)
 
     def clear(self, package: str) -> ADBCommandResult:
         log().verbose(f"clear {package}")
@@ -266,3 +277,45 @@ def _parse_dump_permissions(headline: str, input_str: str) -> Dict[str, bool]:
             else:
                 permissions[splitted_line[0]] = False
     return permissions
+
+
+def _remove_package_from_packages(client: ADBClient, package) -> bool:
+    if not _remove_entry_from_packages_list(client, package):
+        return False
+    return _remove_entry_from_packages_xml(client, package)
+
+
+def _remove_entry_from_packages_list(client: ADBClient, package) -> bool:
+    log().verbose("Removing entry from '/data/system/packages.list'...")
+    content = client.cat("/data/system/packages.list")
+    splitted_content = list(filter(lambda x: not x.startswith(package), content.splitlines()))
+    local_file = Path(tempfile.gettempdir()) / "packages.list"
+    with open(local_file, "w") as fp:
+        for line in splitted_content:
+            fp.write(line)
+        fp.close()
+
+    if not client.push(Path(local_file), "/data/system/"):
+        log().warning("Failed to push '%s' to '/data/system/'" % local_file)
+        return False
+    return True
+
+
+def _remove_entry_from_packages_xml(client: ADBClient, package) -> bool:
+    log().verbose("Removing entry from '/data/system/packages.xml'...")
+    content = client.cat("/data/system/packages.xml")
+
+    root = ElementTree.ElementTree(ElementTree.fromstring(content))
+    for elem in root.findall(".//package[@name='%s']" % package):
+        log().verbose(f"Removing {elem} from node")
+        root.getroot().remove(elem)
+
+    local_file = Path(tempfile.gettempdir()) / "packages.xml"
+
+    with open(local_file, "wb") as fp:
+        root.write(fp, encoding="utf-8")
+
+    if not client.push(Path(local_file), "/data/system/"):
+        log().warning(f"Failed to push '{local_file}' to '/data/system/'")
+        return False
+    return True

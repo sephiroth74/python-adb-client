@@ -470,6 +470,7 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
         stdout=subprocess.PIPE,
         shell=False,
     )
+
     result = out.communicate()
     code = out.returncode
     return ADBCommandResult(result, code)
