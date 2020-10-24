@@ -1,3 +1,8 @@
+"""
+python3 setup.py sdist bdist_wheel
+python3 -m twine upload dist/*
+"""
+
 import sys
 import re
 from setuptools import find_namespace_packages, setup
