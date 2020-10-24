@@ -399,8 +399,8 @@ def execute(command: str, ip: Optional[str] = None, **kwargs) -> bool:
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
     command_line = f"{ip_arg}{command} {get_extra_arguments(**kwargs)}"
-    command_full = f"{adb} {command_line}"
-    command_log = f"adb {command_line}"
+    command_full = f"{adb} {command_line}".strip()
+    command_log = f"adb {command_line}".strip()
     output = subprocess.PIPE if "stdout" not in kwargs else kwargs["stdout"]
 
     try:
@@ -430,8 +430,8 @@ def capture_output(
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
     command_line = f"{ip_arg}{command} {get_extra_arguments(**kwargs)}"
-    command_full = f"{adb} {command_line}"
-    command_log = f"adb {command_line}"
+    command_full = f"{adb} {command_line}".strip()
+    command_log = f"adb {command_line}".strip()
     try:
         if kwargs.get("log", True):
             log().debug(f"Executing `{command_log}`")
@@ -459,8 +459,8 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     ip_arg = f"-s {ip} " if ip else ""
     adb = get_adb_path()
     command_line = f"{ip_arg} shell {command} {get_extra_arguments(**kwargs)}"
-    command_full = f"{adb} {command_line}"
-    command_log = f"adb {command_line}"
+    command_full = f"{adb} {command_line}".strip()
+    command_log = f"adb {command_line}".strip()
     log().debug(f"Executing `{command_log}`")
 
     out = subprocess.Popen(
