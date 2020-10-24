@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+python3 -m tests.test_adb_connection
+"""
+
 import os
 import time
 import unittest

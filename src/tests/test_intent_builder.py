@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+python3 -m tests.test_intent_builder
+"""
+
 import unittest
 
 from pythonadb import Intent
@@ -23,7 +30,8 @@ class ItentBuilderTestCase(unittest.TestCase):
         string = i.build()
 
         self.assertEqual(
-            "-W -a android.intent.action.VIEW -n com.my.component/.internal.ComponentName -d http://www.google.com --es navigation_path /test/1 --es another_one 2 --eia input_array_int 1 2 3",
+            "-W -a android.intent.action.VIEW -n com.my.component/.internal.ComponentName -d http://www.google.com --es "
+            "navigation_path /test/1 --es another_one 2 --eia input_array_int 1 2 3",
             string,
         )
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+python3 -m tests.test_am
+"""
+
 import os
 import unittest
 import time

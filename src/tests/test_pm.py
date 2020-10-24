@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+python3 -m tests.test_pm
+"""
+
 import os
 import unittest
 from pathlib import Path
@@ -119,6 +123,12 @@ class PmTestCase(unittest.TestCase):
         result = self.pm.is_system("com.android.bluetooth")
         self.assertTrue(result)
         self.assertFalse(self.pm.is_system(DEBUG_APK_PACKAGE))
+
+    def test_021(self):
+        print("test_021")
+        packages = self.pm.list()
+        packages = sorted(packages, key=lambda x: x.name)
+        log.debug(packages)
 
 
 if __name__ == "__main__":
