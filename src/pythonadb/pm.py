@@ -286,7 +286,7 @@ def _remove_package_from_packages(client: ADBClient, package) -> bool:
 
 
 def _remove_entry_from_packages_list(client: ADBClient, package) -> bool:
-    log().verbose("Removing entry from '/data/system/packages.list'...")
+    log().debug("Removing entry from '/data/system/packages.list'...")
     content = client.cat("/data/system/packages.list")
     splitted_content = list(filter(lambda x: not x.startswith(package), content.splitlines()))
     local_file = Path(tempfile.gettempdir()) / "packages.list"
@@ -302,7 +302,7 @@ def _remove_entry_from_packages_list(client: ADBClient, package) -> bool:
 
 
 def _remove_entry_from_packages_xml(client: ADBClient, package) -> bool:
-    log().verbose("Removing entry from '/data/system/packages.xml'...")
+    log().debug("Removing entry from '/data/system/packages.xml'...")
     content = client.cat("/data/system/packages.xml")
 
     root = ElementTree.ElementTree(ElementTree.fromstring(content))

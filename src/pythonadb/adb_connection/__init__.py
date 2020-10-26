@@ -680,13 +680,10 @@ def reboot(ip: Optional[str] = None, mode: Optional[str] = None) -> bool:
 
 def remount(ip: Optional[str] = None) -> bool:
     """
-    Remount the file system if root is permitted
+    Remount the file system if root is permitted. Requires root
     :param ip:              device ip
     :return:                True on success
     """
-    if not is_root(ip=ip):
-        if not root(ip=ip):
-            return False
     return execute("remount", ip=ip)
 
 
@@ -694,15 +691,12 @@ def remount_as(
         ip: Optional[str] = None, writeable: bool = False, folder: str = "/system"
 ) -> bool:
     """
-    Mount/Remount file-system
+    Mount/Remount file-system. Requires root
     :param folder:          folder to mount
     :param writeable:       mount as writeable or readable-only
     :param ip:              device ip
     :rtype:                 true on success
     """
-    if not is_root(ip=ip):
-        if not root(ip=ip):
-            return False
     if writeable:
         return (
                 shell(f"mount -o rw,remount {folder}", ip=ip).code

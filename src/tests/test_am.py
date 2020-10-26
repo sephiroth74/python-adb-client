@@ -9,7 +9,7 @@ import os
 import unittest
 import time
 
-from pythonadb import ADBClient, Intent, ActivityManager, KeyCodes
+from pythonadb import ADBClient, Intent, ActivityManager, KeyCodes, PackageManager
 from . import get_logger
 from .test_const import DEVICE_IP
 
@@ -24,7 +24,9 @@ class ActivityManagerTestCase(unittest.TestCase):
         ADBClient.disconnect_all()
 
     def setUp(self) -> None:
-        self.am = ActivityManager(ADBClient(DEVICE_IP))
+        client = ADBClient(DEVICE_IP)
+        self.am = ActivityManager(client)
+        self.pm = PackageManager(client)
         self.assertTrue(self.am.client.connect())
         self.am.client.send_key(KeyCodes.KEYCODE_HOME.value)
         time.sleep(1)
@@ -46,7 +48,8 @@ class ActivityManagerTestCase(unittest.TestCase):
 
     def test_003(self):
         log.info("test_003")
-        package = self.am.client.get_package("com.swisscom.android.tv.library")
+        package = self.pm.find("com.swisscom.android.tv.library")
+        self.assertIsNotNone(package)
         user_id = package.uuid
         log.debug(f"user_id: {user_id}")
 
