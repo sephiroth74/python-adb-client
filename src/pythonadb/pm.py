@@ -24,13 +24,14 @@ package_pattern = re.compile(
 
 def log():
     from . import _logger
-
     return _logger.get_logger(__name__)
 
 
 class PackageManager(object):
     def __init__(self, client: ADBClient):
         self._client = client
+        self._has_cmd = False
+        self._has_cmd_checked = False
 
     @property
     def client(self):
@@ -40,6 +41,13 @@ class PackageManager(object):
         if not self.is_installed(package):
             return ADBCommandResult.from_error()
         return self.client.shell(f"pm dump {package}")
+
+    @property
+    def has_cmd(self):
+        if not self._has_cmd_checked:
+            self._has_cmd = self.client.which("cmd") is not None
+            self._has_cmd_checked = True
+        return self._has_cmd
 
     """ -----------------------------------------------------------------------"""
     """ Permissions """
@@ -179,39 +187,9 @@ class PackageManager(object):
     """
 
     def list(self, package: Optional[str] = None, **kwargs):
-        """
-        list packages [-f] [-d] [-e] [-s] [-3] [-i] [-l] [-u] [-U] [--uid UID] [--user USER_ID] [FILTER]
-        Prints all packages; optionally only those whose name contains
-        the text in FILTER.
-        Options:
-        -f: see their associated file
-        -d: filter to only show disabled packages
-        -e: filter to only show enabled packages
-        -s: filter to only show system packages
-        -3: filter to only show third party packages
-        -i: see the installer for the packages
-        -l: ignored (used for compatibility with older releases)
-        -U: also show the package UID
-        -u: also include uninstalled packages
-        --uid UID: filter to only show packages with the given UID
-        --user USER_ID: only list packages belonging to the given user
-
-        :param package: optional package to look for
-        :param kwargs:
-        :return:
-        """
-        result = self.client.shell(
-            "cmd package list packages",
-            **extends_extra_arguments(f"{package if package else ''}", **kwargs),
-        )
-        packages = list()
-        if result.is_ok() and result.output():
-            for line in result.output().splitlines():
-                match = re.match(package_pattern, line)
-                if match:
-                    packages.append(Package(match.groupdict()))
-
-        return packages
+        if self.has_cmd:
+            return _cmd_list(self.client, package, **kwargs)
+        return _pm_list(self.client, package, **kwargs)
 
     def is_installed(self, package: str) -> bool:
         return any(x.name == package for x in self.list(package))
@@ -319,3 +297,70 @@ def _remove_entry_from_packages_xml(client: ADBClient, package) -> bool:
         log().warning(f"Failed to push '{local_file}' to '/data/system/'")
         return False
     return True
+
+
+def _pm_list(client: ADBClient, package: Optional[str] = None, **kwargs):
+    """
+    Uses legacy "pm list packages"
+    pm list packages: prints all packages, optionally only
+    those whose package name contains the text in FILTER.  Options:
+        -f: see their associated file.
+        -d: filter to only show disbled packages.
+        -e: filter to only show enabled packages.
+        -s: filter to only show system packages.
+        -3: filter to only show third party packages.
+        -i: see the installer for the packages.
+        -u: also include uninstalled packages.
+    :param client: current ADBClient
+    :param package:
+    :param kwargs:
+    :return:
+    """
+    result = client.shell(
+        "pm list packages",
+        **extends_extra_arguments(f"{package if package else ''}", **kwargs),
+    )
+    if result.is_ok() and result.output():
+        return _parse_packages(result.output())
+    return list()
+
+
+def _cmd_list(client: ADBClient, package: Optional[str] = None, **kwargs):
+    """
+    list packages [-f] [-d] [-e] [-s] [-3] [-i] [-l] [-u] [-U] [--uid UID] [--user USER_ID] [FILTER]
+    Prints all packages; optionally only those whose name contains
+    the text in FILTER.
+    Options:
+    -f: see their associated file
+    -d: filter to only show disabled packages
+    -e: filter to only show enabled packages
+    -s: filter to only show system packages
+    -3: filter to only show third party packages
+    -i: see the installer for the packages
+    -l: ignored (used for compatibility with older releases)
+    -U: also show the package UID
+    -u: also include uninstalled packages
+    --uid UID: filter to only show packages with the given UID
+    --user USER_ID: only list packages belonging to the given user
+
+    :param client: current ADBClient
+    :param package: optional package to look for
+    :param kwargs:
+    :return:
+    """
+    result = client.shell(
+        "cmd package list packages",
+        **extends_extra_arguments(f"{package if package else ''}", **kwargs),
+    )
+    if result.is_ok() and result.output():
+        return _parse_packages(result.output())
+    return list()
+
+
+def _parse_packages(output: str) -> List[Package]:
+    packages = list()
+    for line in output.splitlines():
+        match = re.match(package_pattern, line)
+        if match:
+            packages.append(Package(match.groupdict()))
+    return packages

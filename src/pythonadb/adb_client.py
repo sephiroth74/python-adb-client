@@ -22,13 +22,19 @@ def log():
 class ADBClient(object):
     def __init__(self, identifier: Optional[str] = None):
         self._identifier = identifier
+        self._has_busybox = False
+        self._has_busybox_checked = False
 
     @property
     def identifier(self):
         return self._identifier
 
+    @property
     def has_busybox(self):
-        return self.which("busybox") is not None
+        if not self._has_busybox_checked:
+            self._has_busybox = self.exists("/system/bin/busybox")
+            self._has_busybox_checked = True
+        return self._has_busybox
 
     def wait_for_device(self) -> bool:
         if self.is_connected():
@@ -213,7 +219,7 @@ class ADBClient(object):
 
     def which(self, command: str) -> Optional[str]:
         self._connect_if_disconnected()
-        return adb_connection.which(command=command, ip=self._identifier)
+        return adb_connection.which(command=command, use_busybox=self.has_busybox, ip=self._identifier)
 
     def ls(self, dirname: str, **kwargs):
         args = adb_connection.expand_extra_arguments(**kwargs)

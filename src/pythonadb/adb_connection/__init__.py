@@ -375,15 +375,17 @@ def set_adb_path(path: str):
     adb_path = path
 
 
-def which(command: str, ip: Optional[str] = None) -> Optional[str]:
+def which(command: str, use_busybox: bool = False, ip: Optional[str] = None) -> Optional[str]:
     """
     Execute 'which' command on the specified device and return the result
     :param command:     command to test with 'which'
-    :param ip:   device ip
-    :return: the command path on the device, if found
+    :param use_busybox: if True will use busybox 'which' instead of the system which
+    :param ip:          device ip
+    :return:            the command path on the device, if found
     """
-    result = shell(f"which {command}", ip=ip)
-    if result.code == ADBCommandResult.RESULT_OK and len(result.output()) > 0:
+    which_cmd = "busybox which" if use_busybox else "which"
+    result = shell(f"{which_cmd} {command}", ip=ip)
+    if result.code == ADBCommandResult.RESULT_OK and result.output() and len(result.output()) > 0:
         return result.output()
     return None
 

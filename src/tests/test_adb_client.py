@@ -148,7 +148,7 @@ class ADBClientTestCase(unittest.TestCase):
         self.assertTrue(result.is_ok())
         log.debug(f"result: {result.output()}")
 
-        if self.client.has_busybox():
+        if self.client.has_busybox:
             result1 = self.client.busybox(
                 "ls", args=("-lHha", "--color=none", "/sdcard")
             )

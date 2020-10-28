@@ -1,4 +1,5 @@
 """
+rm -fr out build dist src/pythonadb.egg-info
 python3 setup.py sdist bdist_wheel
 python3 -m twine upload dist/*
 """
