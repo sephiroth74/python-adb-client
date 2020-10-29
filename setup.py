@@ -41,7 +41,7 @@ setup(
         "verboselogs>=1.7",
         "zope.event>=4.5.0",
         "coloredlogs>=14.0",
-        "optional.py=>1.1.0",
+        "optional.py>=1.1.0",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
