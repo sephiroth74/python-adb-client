@@ -3,10 +3,12 @@
 
 import os
 import re
+import optional
 from pathlib import Path
-from typing import Optional, Dict, Union
+from typing import Dict, Union, Optional
 
 from . import adb_connection
+from . import constants
 from .adb_connection import ADBCommandResult
 
 __all__ = ["ADBClient"]
@@ -22,19 +24,22 @@ def log():
 class ADBClient(object):
     def __init__(self, identifier: Optional[str] = None):
         self._identifier = identifier
-        self._has_busybox = False
-        self._has_busybox_checked = False
+        self._busybox: Optional[optional.Optional[bool]] = None
+        self._which: Optional[optional.Optional[bool]] = None
 
     @property
     def identifier(self):
         return self._identifier
 
-    @property
     def has_busybox(self):
-        if not self._has_busybox_checked:
-            self._has_busybox = self.exists("/system/bin/busybox")
-            self._has_busybox_checked = True
-        return self._has_busybox
+        if self._busybox is None:
+            self._busybox = optional.Optional.of(self.exists(constants.BUSYBOX))
+        return self._busybox.get()
+
+    def hash_which(self):
+        if self._which is None:
+            self._which = optional.Optional.of(self.exists(constants.WHICH))
+        return self._which
 
     def wait_for_device(self) -> bool:
         if self.is_connected():
@@ -219,7 +224,7 @@ class ADBClient(object):
 
     def which(self, command: str) -> Optional[str]:
         self._connect_if_disconnected()
-        return adb_connection.which(command=command, use_busybox=self.has_busybox, ip=self._identifier)
+        return adb_connection.which(command=command, ip=self._identifier)
 
     def ls(self, dirname: str, **kwargs):
         args = adb_connection.expand_extra_arguments(**kwargs)

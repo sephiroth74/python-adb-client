@@ -171,9 +171,11 @@ import subprocess
 import time
 from typing import List, Optional, Dict, Tuple, Any
 
+# noinspection PyPackageRequirements
 import zope.event
 
 from .. import events
+from .. import constants
 
 __all__ = [
     "ADBCommandResult",
@@ -375,15 +377,26 @@ def set_adb_path(path: str):
     adb_path = path
 
 
-def which(command: str, use_busybox: bool = False, ip: Optional[str] = None) -> Optional[str]:
+def busybox(command: str, ip: Optional[str] = None, **kwargs):
+    """
+    Executes a shell command using 'busybox'. If busybox in not installed on the device it will fail.\n
+    See https://busybox.net/
+    :param command:
+    :param ip:
+    :param kwargs:
+    :return:
+    """
+    return shell(f"{constants.BUSYBOX} {command}", ip, **kwargs)
+
+
+def which(command: str, ip: Optional[str] = None) -> Optional[str]:
     """
     Execute 'which' command on the specified device and return the result
     :param command:     command to test with 'which'
-    :param use_busybox: if True will use busybox 'which' instead of the system which
     :param ip:          device ip
     :return:            the command path on the device, if found
     """
-    which_cmd = "busybox which" if use_busybox else "which"
+    which_cmd = f"{constants.WHICH}"
     result = shell(f"{which_cmd} {command}", ip=ip)
     if result.code == ADBCommandResult.RESULT_OK and result.output() and len(result.output()) > 0:
         return result.output()
@@ -476,18 +489,6 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     result = out.communicate()
     code = out.returncode
     return ADBCommandResult(result, code)
-
-
-def busybox(command: str, ip: Optional[str] = None) -> ADBCommandResult:
-    """
-    Executes a shell command using 'busybox'. If busybox in not installed on the device it will fail.\n
-    See https://busybox.net/
-
-    :param command:         the busybox command to execute
-    :param ip:              device ip
-    :return:                command result
-    """
-    return shell(f"busybox {command}", ip=ip)
 
 
 def wait_for_device(ip: Optional[str] = None) -> bool:
@@ -611,7 +612,7 @@ def is_connected(ip: Optional[str] = None) -> bool:
     return result.code == ADBCommandResult.RESULT_OK and result.output() == "device"
 
 
-def connect(ip: str) -> bool:
+def connect(ip: Optional[str]) -> bool:
     """
     Attempts to connect to the device with the given ip address
     :param ip: device ip
@@ -653,7 +654,7 @@ def disconnect_all() -> bool:
     return False
 
 
-def disconnect(ip: str) -> bool:
+def disconnect(ip: Optional[str]) -> bool:
     """
     Disconnect from the given device ip
     :param ip: device ip

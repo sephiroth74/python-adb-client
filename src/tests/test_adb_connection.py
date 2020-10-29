@@ -18,6 +18,7 @@ from .test_const import DEVICE_IP
 
 log = get_logger("==> test_adb_connection")
 
+
 # coverage run -m unittest discover
 # coverage report -m
 # coverage html
