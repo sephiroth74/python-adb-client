@@ -326,7 +326,7 @@ class ADBClient(object):
 
     def _test_file(self, path: str, mode: str) -> bool:
         result = self.shell("test -{} {} && echo 1 || echo 0".format(mode, path))
-        print(f"code: {result.code}, output:{result.output()}")
+        log().spam(f"code: {result.code}, output:{result.output()}")
         if result.code == ADBCommandResult.RESULT_OK:
             return result.output().strip() == "1"
         return False
