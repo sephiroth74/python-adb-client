@@ -39,7 +39,7 @@ class ADBClient(object):
     def hash_which(self):
         if self._which is None:
             self._which = optional.Optional.of(self.exists(constants.WHICH))
-        return self._which
+        return self._which.get()
 
     def wait_for_device(self) -> bool:
         if self.is_connected():
@@ -224,7 +224,14 @@ class ADBClient(object):
 
     def which(self, command: str) -> Optional[str]:
         self._connect_if_disconnected()
-        return adb_connection.which(command=command, ip=self._identifier)
+        if self.hash_which():
+            return adb_connection.which(command=command, ip=self._identifier)
+        elif self.has_busybox():
+            result = self.busybox(f"which {command}")
+            if result.is_ok():
+                return result.output()
+        else:
+            return None
 
     def ls(self, dirname: str, **kwargs):
         args = adb_connection.expand_extra_arguments(**kwargs)
@@ -319,6 +326,7 @@ class ADBClient(object):
 
     def _test_file(self, path: str, mode: str) -> bool:
         result = self.shell("test -{} {} && echo 1 || echo 0".format(mode, path))
+        print(f"code: {result.code}, output:{result.output()}")
         if result.code == ADBCommandResult.RESULT_OK:
             return result.output().strip() == "1"
         return False
