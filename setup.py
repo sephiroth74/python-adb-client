@@ -40,7 +40,7 @@ setup(
     install_requires=[
         "verboselogs>=1.7",
         "zope.event>=4.5.0",
-        "coloredlogs>=14.0",
+        "coloredlogs>=15.0",
         "optional.py>=1.1.0",
     ],
     classifiers=[

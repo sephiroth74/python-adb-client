@@ -169,13 +169,27 @@ class ADBClient(object):
             return dict(map(lambda x: x.split("=", 1), output.splitlines()))
         return None
 
+    def get_system_settings(self) -> Optional[Dict[str, str]]:
+        code, output, error = self.shell("settings list system")
+        if code == ADBCommandResult.RESULT_OK and output:
+            return dict(map(lambda x: x.split("=", 1), output.splitlines()))
+        return None
+
     def get_global_settings_value(self, key: str):
         """Retrieve a value from the device global settings"""
         return self.shell(f"settings get global {key}")
 
+    def get_system_settings_value(self, key: str):
+        """Retrieve a value from the device system settings"""
+        return self.shell(f"settings get system {key}")
+
     def set_global_settings_value(self, key: str, value: str):
         self.root()
         return self.shell(f"settings put global {key} {value}")
+
+    def set_system_settings_value(self, key: str, value: str):
+        self.root()
+        return self.shell(f"settings put system {key} {value}")
 
     def dumpsys_bluetooth(self):
         return self.dumpsys("bluetooth_manager")
