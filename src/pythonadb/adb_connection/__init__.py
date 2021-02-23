@@ -475,12 +475,18 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     adb = get_adb_path()
     command_line = f"{ip_arg} shell"
     command_args = f"{command} {get_extra_arguments(**kwargs)}"
-    command_full = f"{adb} {command_line} {command_args}".strip()
-    command_log = f"adb {command_line} {command_args}".strip()
+    command_full = f'{adb} {command_line} {command_args}'.strip()
+    command_log = f'adb {command_line} \"{command_args}\"'.strip()
     log().debug(f"Executing `{command_log}`")
 
+    args = [get_adb_path()]
+    args.extend(command_line.split())
+    args.append(command_args)
+
+    log().debug(args)
+
     out = subprocess.Popen(
-        command_full.split(),
+        args,
         stdin=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,

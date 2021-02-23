@@ -38,10 +38,10 @@ setup(
     packages=find_namespace_packages(where="src", exclude=("tests", "htmlconv")),
     test_suite="nose.collector",
     install_requires=[
-        "verboselogs>=1.7",
-        "zope.event>=4.5.0",
         "coloredlogs>=15.0",
         "optional.py>=1.1.0",
+        "verboselogs>=1.7",
+        "zope.event>=4.5.0",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
