@@ -211,6 +211,17 @@ class ADBClient(object):
     def ifconfig(self):
         return self.shell("ifconfig")
 
+    def gc(self, pid: int) -> bool:
+        """Force the GC for the given pid"""
+        return self.shell(f"kill -10 {pid}").is_ok()
+
+    def pid(self, packagename: str) -> int:
+        """Retrieve the pid of the given package or -1 if not found"""
+        result = self.shell(f"pidof -s {packagename}")
+        if result.is_ok():
+            return int(result.output())
+        return -1
+
     """ -----------------------------------------------------------------------"""
     """ File system methods """
     """ -----------------------------------------------------------------------"""
