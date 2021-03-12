@@ -483,8 +483,6 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
     args.extend(command_line.split())
     args.append(command_args)
 
-    log().debug(args)
-
     out = subprocess.Popen(
         args,
         stdin=subprocess.PIPE,
