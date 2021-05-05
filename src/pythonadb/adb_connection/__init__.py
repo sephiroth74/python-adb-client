@@ -300,6 +300,7 @@ class ADBCommandResult(object):
             self,
             result: Tuple[Optional[bytes], Optional[bytes]] = (None, None),
             code: int = RESULT_OK,
+            encoding: str = "utf-8",
     ):
         super(ADBCommandResult, self).__init__()
         self._stdout = result[0] if result[0] else None
@@ -307,6 +308,7 @@ class ADBCommandResult(object):
             result[1].decode("utf-8").strip() if result[1] is not None else None
         )
         self._code = code
+        self._encoding = encoding
 
     def __iter__(self):
         return (self._code, self.output(), self.error()).__iter__()
@@ -330,7 +332,7 @@ class ADBCommandResult(object):
 
     def output(self, raw: bool = False):
         if self._stdout and not raw:
-            return self._stdout.decode("utf-8").strip()
+            return self._stdout.decode(self._encoding).strip()
         return self._stdout
 
     def error(self):
@@ -493,7 +495,7 @@ def shell(command: str, ip: Optional[str] = None, **kwargs) -> ADBCommandResult:
 
     result = out.communicate()
     code = out.returncode
-    return ADBCommandResult(result, code)
+    return ADBCommandResult(result, code, kwargs['encoding'] if 'encoding' in kwargs else 'utf-8')
 
 
 def wait_for_device(ip: Optional[str] = None) -> bool:

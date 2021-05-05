@@ -241,8 +241,8 @@ class ADBClient(object):
     def remove(self, dst: str):
         return self.shell(f"rm -fr {dst}")
 
-    def cat(self, filename: str) -> str:
-        code, output, error = self.shell(f"cat {filename}")
+    def cat(self, filename: str, encoding: str = 'utf-8') -> str:
+        code, output, error = self.shell(f"cat {filename}", encoding=encoding)
         if code != ADBCommandResult.RESULT_OK:
             raise IOError(f"File {filename} not found")
         return output
