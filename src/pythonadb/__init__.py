@@ -1,6 +1,6 @@
 from ._version import __version__
 from .types import *
-from .intent import Intent
+from .intent import Intent, Extras
 from .keycodes import KeyCodes, CPlusPlusKeyCodes
 from . import adb_connection
 from .adb_client import ADBClient
