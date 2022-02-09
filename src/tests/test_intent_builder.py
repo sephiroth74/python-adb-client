@@ -35,6 +35,21 @@ class ItentBuilderTestCase(unittest.TestCase):
             string,
         )
 
+    def test_002(self):
+        print("test_002")
+
+        i = Intent(action="custom")
+        i.waitforlaunchtocomplete(True)
+        i.extras.es["primo"] = "uno"
+        i.extras.ez["secondo"] = True
+
+        print(i.build())
+
+        i = Intent(action="second_custom")
+        i.waitforlaunchtocomplete(True)
+        i.extras.ei["ei.1"] = 1
+        print(i.build())
+
 
 if __name__ == "__main__":
     unittest.main()

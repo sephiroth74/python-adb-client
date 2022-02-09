@@ -39,7 +39,7 @@ setup(
     test_suite="nose.collector",
     install_requires=[
         "coloredlogs>=15.0.1",
-        "optional.py>=1.1.0",
+        "optional.py>=1.3.2",
         "verboselogs>=1.7",
         "zope.event>=4.5.0",
     ],
