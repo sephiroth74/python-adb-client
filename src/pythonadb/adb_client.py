@@ -362,8 +362,15 @@ class ADBClient(object):
 
     def _parse_properties(self, string: str) -> Dict[str, str]:
         result = dict()
-        lines = list(map(lambda x: x.split(":", 1), string.splitlines()))
-        for line in lines:
-            item = list(map(lambda y: y.strip()[1:-1], line))
-            result[item[0]] = item[1]
+
+        matches = re.findall("\[([^\]]+)\]\s*:\s*\[([^\]]+)\]", string, re.DOTALL)
+        for line in matches:
+            if line and len(line) > 1:
+                result[line[0]] = line[1]
         return result
+
+        # lines = list(map(lambda x: x.split(":", 1), string.splitlines()))
+        # for line in lines:
+            # item = list(map(lambda y: y.strip()[1:-1], line))
+            # result[item[0]] = item[1]
+        # return result
