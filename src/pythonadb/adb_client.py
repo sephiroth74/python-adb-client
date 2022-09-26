@@ -299,25 +299,25 @@ class ADBClient(object):
             return next(map(lambda y: y[0], filter(lambda x: x[1] == name, events)), events[0])
         return '/dev/input/event0'
 
-    def key_up(self, key: int, device: str = '/dev/input/event0'):
+    def key_up(self, key: int, msc_scan: str = '000c0042', device: str = '/dev/input/event0'):
         return self.shell(
             f"""
-        sendevent {device} 0004 0004 000c0042 &&
+        sendevent {device} 0004 0004 {msc_scan} &&
         sendevent {device} 0001 {key} 00000000 &&
         sendevent {device} 0000 0000 00000000
         """
         )
 
-    def key_down(self, key: int, device: str = '/dev/input/event0'):
+    def key_down(self, key: int, msc_scan: str = '000c0042', device: str = '/dev/input/event0'):
         return self.shell(
             f"""
-        sendevent {device} 0004 0004 000c0042 &&
+        sendevent {device} 0004 0004 {msc_scan} &&
         sendevent {device} 0001 {key} 00000001 &&
         sendevent {device} 0000 0000 00000000
         """
         )
 
-    def send_raw_key(self, key: int, device: str = '/dev/input/event0'):
+    def send_raw_key(self, key: int, msc_scan: str = '000c0042', device: str = '/dev/input/event0'):
         """
         Most values are from CplusPlusKeyCodes
         Seee https://supportcommunity.zebra.com/s/article/Find-out-key-event-via-ADB?language=en_US
@@ -327,10 +327,10 @@ class ADBClient(object):
         """
         return self.shell(
             f"""
-        sendevent {device} 0004 0004 000c0042 &&
+        sendevent {device} 0004 0004 {msc_scan} &&
         sendevent {device} 0001 {key} 00000001 &&
         sendevent {device} 0000 0000 00000000 &&
-        sendevent {device} 0004 0004 000c0042 &&
+        sendevent {device} 0004 0004 {msc_scan} &&
         sendevent {device} 0001 {key} 00000000 &&
         sendevent {device} 0000 0000 00000000"""
         )

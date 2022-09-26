@@ -641,3 +641,7 @@ class CPlusPlusKeyCodes(enum.Enum):
     KEY_ZENKAKUHANKAKU = 85
     KEY_ZOOM = 0x174
     KEY_RADIO = 386
+
+
+class Event:
+    MSC_SCAN = '000c0042' # or 000c0043 for android-12
